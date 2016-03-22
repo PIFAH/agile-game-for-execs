@@ -239,8 +239,15 @@
 (defun get-projects (game)
   (cdr (assoc 'projects game)))
 
+(defun get-project-symbols (game)
+  (mapcar (lambda (p) (cadr p)) (get-projects game)))
+
 (defun get-teams (game)
   (cdr (assoc 'teams game)))
+
+(defun get-team-symbols (game)
+  (mapcar (lambda (p) (cadr p)) (get-teams game)))
+
 
 (defun compute-velocitys (game)
   (mapcar #'(lambda (proj)
@@ -336,7 +343,7 @@
 ;; (setq game5 (make-turn game4 first-turn))
 ;; (setq game6 (make-turn game5 first-turn))
 
-(defun play-game ()
+(defun simulate-play ()
   (setq game (start-game))
   (setq first-turn '((Elite-Team . FTL-Project) (Erratic-Team . Rejuvenation-Project) (Average-Team . Pocket-Fusion-Project) (Weak-Team . Super-Capacitor-Project) (User-Focused-Team . Super-Capactior-Project)))
   (setq game2 (make-turn game first-turn))
@@ -345,3 +352,35 @@
   (setq game5 (make-turn game4 first-turn))
   (setq game6 (make-turn game5 first-turn))
   )
+
+
+(defun start-i ()
+  (interactive)
+  (setq game (start-game))
+  (print (render-game game))
+  )
+
+(setq assignment '())
+;; What we really want to do here is to construct the "assignment" of teams to projects.
+;; We don't need to "play" the game in the mini buffer except to help with the typing of commands.
+;; I'm happy entering lisp commands.
+(defun assign-i (project team)             ; foo3 takes one argument,
+  (interactive (list (completing-read "Select project: " (get-project-symbols game))
+		     (completing-read "Select team: " (get-team-symbols game))
+		     ))
+  (let ((tm (intern-soft team))
+	(pr (intern-soft project)))
+    (print tm)
+    (print pr)
+    ;; we should probably delete the team assignment here, because there can only be one.
+    (assq-delete-all tm assignment)
+    (setq assignment (cons (cons tm pr) assignment))
+    (print assignment)))
+
+(defun turn-i ()             ; foo3 takes one argument,
+  (interactive)
+  (print assignment)
+  (setq game (make-turn game assignment))
+  (print (render-game game)))
+  
+
