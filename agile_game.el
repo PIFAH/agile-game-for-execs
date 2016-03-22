@@ -1,5 +1,7 @@
 ;; This is an attempt to quickly program a an Agile game.
 
+(require 'cl-lib)
+
 ;; This is basically a card game.  I'm going to program up the "cards" here
 ;; into a series of "decks".  There will be 6 turns in the game. After each turn,
 ;; The user can assign teams to projects.  The point of the game is to get a maximum
@@ -112,7 +114,7 @@
   (dotimes (number n value)
     (setq value (cons (choose-from-array a) value)))))
 
-(defun choose-n-without-replacement (a n)
+O(defun choose-n-without-replacement (a n)
   (let ((indices (number-sequence 0 (- (length a) 1))))
     (let (value)      ; otherwise a value is a void variable
       (dotimes (number n value)
@@ -133,6 +135,7 @@
 (defun cons-game (projects teams turns)
   `((projects . ,projects)
     (teams . ,teams)
+    (victory-points . 0)
     (turns . ,turns)))
 
 (defun start-game ()
@@ -155,8 +158,15 @@
   "Here we use the rules to draw team events and velocity cards for each team. The result here is a set of card draws associated with each team."
   (mapcar #'(lambda (x)
 	      (progn
-		(let ((draws (funcall (car (cddr x)) game turn)))
-		  (cons (cadr x) draws)))
+		(let* ((draws (funcall (car (cddr x)) game turn))
+		       (velocity (cons (cadr x) draws)))
+		  (print "Computing Velocity for Team:")
+		  (print (cadr x))
+		  (print "Wish them well...")
+		  (sit-for 1.4)
+		  (print velocity)
+		  (print "...total story points!")
+		  velocity))
 	      )
 	  teams))
 
@@ -178,21 +188,18 @@
    )
   )
 
-(defun add-turn (game turn)
-  (cons-game (cdr (assoc 'projects game))
-	     (cdr (assoc 'teams game))
-	     (cons turn (cdr (assoc 'turns game)))))
-
 (defun make-turn (game alist)
   "perform a single turn. Argument is assoc list assigning teams to projects."
   (let* ((teams (cdr (assoc 'teams game)))
 	 (turns (cdr (assoc 'turns game)))
 	 (turn-num (+ 1 (length turns)))
 	 (turn (create-turn alist (choose-from-array global-event))))
-    (let* ((team-events (exec-team-event-draws game turn teams)))
-      (add-turn-and-events game turn team-events)
+    (let* ((team-events (exec-team-event-draws game turn teams))
+	   (new-game 
+	    (add-turn-and-events game turn team-events)))
+      (cons (cons 'victory-points (total-score new-game)) new-game))
       )
-    ))
+    )
   
 
 (defun get-velocity (project turn)
@@ -294,6 +301,21 @@
 	   )
     ))
 
+(defun total-score (game)
+  (let* ((turns (cdr (assoc 'turns game)))
+	 (n (length turns)))
+    (let ((velocities (compute-velocitys-through-turn game n)))
+      (apply '+
+	     (mapcar
+	      (lambda (element)
+		(let ((psym (car element))
+		      (v (cdr element)))
+		  (let ((project (get-project-from-sym psym (get-projects game))))
+		    (compute-score v project))
+		  ))
+	      velocities))
+       )))
+
 (defun get-project-from-sym (psym projects)
   (if (null projects)
       ()
@@ -321,27 +343,27 @@
 
 (defun render-game (game)
   "render the game in a visually attractive way"
+  ;; We need to print an introduction that is not purely turn based.
   (let* ((turns (cdr (assoc 'turns game)))
 	 (n (length turns)))
-    (reverse
-     (let (value)      ; otherwise a value is a void variable
-      (dotimes (i n value)
-	(setq value (cons (render-turn game i) value))
-	))
-  )))
+    (list
+     (list
+      (cons "Projects:"
+	    (get-project-symbols game))
+      (cons "Teams:"
+	    (get-team-symbols game))
+      (cons "Turns so far: "
+	    n)
+      (cons "Victory Points: "
+	    (total-score game)
+	    )
+      )
+    )))
 
 ;; Should I now present victory conditions? That is really fundamental --- to cross reference the goals with the
 ;; velocity to compute victory contions.
 
 
-;; Example game:
-;; (setq game (start-game))
-;; (setq first-turn '((Elite-Team . FTL-Project) (Erratic-Team . Rejuvenation-Project) (Average-Team . Rejuvenation-Project) (Weak-Team . Rejuvenation-Project)))
-;; (setq game2 (make-turn game first-turn))
-;; (setq game3 (make-turn game2 first-turn))
-;; (setq game4 (make-turn game3 first-turn))
-;; (setq game5 (make-turn game4 first-turn))
-;; (setq game6 (make-turn game5 first-turn))
 
 (defun simulate-play ()
   (setq game (start-game))
@@ -357,30 +379,56 @@
 (defun start-i ()
   (interactive)
   (setq game (start-game))
-  (print (render-game game))
+  (pp (render-game game))
   )
 
 (setq assignment '())
 ;; What we really want to do here is to construct the "assignment" of teams to projects.
 ;; We don't need to "play" the game in the mini buffer except to help with the typing of commands.
 ;; I'm happy entering lisp commands.
-(defun assign-i (project team)             ; foo3 takes one argument,
-  (interactive (list (completing-read "Select project: " (get-project-symbols game))
-		     (completing-read "Select team: " (get-team-symbols game))
+(defun assign-i (team project)             ; foo3 takes one argument,
+  (interactive (list (completing-read "Select team: " (get-team-symbols game))
+		     (completing-read "Select project: " (get-project-symbols game))
 		     ))
   (let ((tm (intern-soft team))
 	(pr (intern-soft project)))
-    (print tm)
-    (print pr)
+    (pp tm)
+    (pp pr)
     ;; we should probably delete the team assignment here, because there can only be one.
     (assq-delete-all tm assignment)
     (setq assignment (cons (cons tm pr) assignment))
-    (print assignment)))
+    (pp assignment)))
 
-(defun turn-i ()             ; foo3 takes one argument,
+(defun turn-i ()     
   (interactive)
-  (print assignment)
-  (setq game (make-turn game assignment))
-  (print (render-game game)))
-  
+  ;; We want to check to make sure all teams are assigned here, and if not we want to ask them.
+  ;; Then we want to add dramatic pauses to the act of the randomgeneration and
+  ;; whenever a goal is changed or achieved.
+  (pp assignment)
+  (let ((unass (unassigned-teams assignment game)))
+    (if unass
+	(progn
+	  (print "Some teams are not assigned:")
+	  (print unass)
+	  (print "You probably want to assign them to projects:")
+	  (print (get-project-symbols game))
+	  (let ((cont (y-or-n-p "You can assign teams with assign-i. Continue with unassigned teams? ")))
+	    (if cont
+		(progn
+		  (setq game (make-turn game assignment))
+		  (pp (render-game game)))
+	      )
+	    )
+	  )
+      (progn
+	(setq game (make-turn game assignment))
+	(pp (render-game game)))
+      )
+    ))
 
+(defun unassigned-teams (assignment game)
+  (let ((gteams (get-team-symbols game))
+	(ateams (mapcar (lambda (a) (car a)) assignment)))
+    (cl-set-difference gteams ateams)
+  ))
+  
