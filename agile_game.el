@@ -46,8 +46,15 @@
 		 ])
 
 (setq global-events [
-		    ("Zombie Outbreak! Draw no velocity cards this turn".)
-		    ("Congress Mandates COBOL! Add 25 points to cost of every goal.")
+		    ("Zombie Outbreak! Draw no velocity cards this turn!" Zombie-Outbreak (lambda (v) 0))
+		    ("Congress Mandates COBOL! Add 25 points to cost of every unachived goal." COBOL-Mandate (lambda (v) v))
+		    ("Flu Outbreak! Half-velocity this turn!" No-News-Is-Good-News (lambda (v) (/ v 2)))
+		    ("No news is good news." No-News-Is-Good-News (lambda (v) v))
+		    ("No news is good news." No-News-Is-Good-News (lambda (v) v))
+		    ("No news is good news." No-News-Is-Good-News (lambda (v) v))
+		    ("No news is good news." No-News-Is-Good-News (lambda (v) v))
+		    ("No news is good news." No-News-Is-Good-News (lambda (v) v))
+		    ("No news is good news." No-News-Is-Good-News (lambda (v) v))
 		    ])
 
 (setq team-resources [
@@ -128,7 +135,7 @@ O(defun choose-n-without-replacement (a n)
 
 (defun create-turn (alist global-events)
   `(turn (assignments . ,alist)
-	 (globals-cards . ,global-events)
+	 (global-cards . ,global-events)
 	 (team-cards . ())
 	 ))
 
@@ -156,19 +163,21 @@ O(defun choose-n-without-replacement (a n)
 
 (defun exec-team-event-draws (game turn teams)
   "Here we use the rules to draw team events and velocity cards for each team. The result here is a set of card draws associated with each team."
-  (mapcar #'(lambda (x)
-	      (progn
-		(let* ((draws (funcall (car (cddr x)) game turn))
-		       (velocity (cons (cadr x) draws)))
-		  (print "Computing Velocity for Team:")
-		  (print (cadr x))
-		  (print "Wish them well...")
-		  (sit-for 1.4)
-		  (print velocity)
-		  (print "...total story points!")
-		  velocity))
-	      )
-	  teams))
+  (let ((vel-func (cadr (car (cdr (assoc 'global-cards (cdr turn)))))))
+    (mapcar #'(lambda (x)
+		(progn
+		  (let* ((draws (funcall (car (cddr x)) game turn))
+			 (draws-x (mapcar (lambda (d) (funcall vel-func d)) draws))
+			 (velocity (cons (cadr x) draws-x)))
+		    (print "Computing Velocity for Team:")
+		    (print (cadr x))
+		    (print "Wish them well...")
+		    (sit-for 0.5)
+		    (print velocity)
+		    (print "...total story points!")
+		    velocity))
+		)
+	    teams)))
 
 (defun add-turn-and-events (game turn events)
   (cons-game
@@ -188,12 +197,25 @@ O(defun choose-n-without-replacement (a n)
    )
   )
 
+;; A programming hero would make this chooser mockable so that
+;; they could write a test for each weird condition
+(defun choose-global-event (global-event)
+  (let ((event 
+	 (choose-from-array global-event)))
+    (print "Let's see what is going on outside of your control...")
+    (print "Drum roll please...")
+    (sit-for 3)
+    (print event)
+    (sit-for 1)
+    event
+  ))
+
 (defun make-turn (game alist)
   "perform a single turn. Argument is assoc list assigning teams to projects."
   (let* ((teams (cdr (assoc 'teams game)))
 	 (turns (cdr (assoc 'turns game)))
 	 (turn-num (+ 1 (length turns)))
-	 (turn (create-turn alist (choose-from-array global-event))))
+	 (turn (create-turn alist (list (cdr (choose-global-event global-events))))))
     (let* ((team-events (exec-team-event-draws game turn teams))
 	   (new-game 
 	    (add-turn-and-events game turn team-events)))
@@ -211,8 +233,8 @@ O(defun choose-n-without-replacement (a n)
 	(team-cards (cdr (assoc 'team-cards turn))))
     ;; (print (cdr (assoc 'assignments turn)))
     ;; (print project)
-    ;; (print team)
-    ;; (print team-cards)
+    (print team)
+    (print team-cards)
 
     (apply '+ (mapcar (lambda (element)
 		(let ((lteam (car element))
@@ -324,6 +346,19 @@ O(defun choose-n-without-replacement (a n)
 	  (car projects)
 	(get-project-from-sym psym (cdr projects))))))
 
+;; This really needs to expand to tell us what goals have been met, how many
+;; victory points are provided by this project, and the points to the next goal..
+;; basically all of that requires a big of a re-org to get it all in a single
+;; function basted on the project.
+(defun pp-project-goals (psym game)
+  "Pretty print the psym goals with status"
+  (let* ((p (get-project-from-sym psym (get-projects game)))
+	 (v (compute-velocity-project game psym)))
+    (list psym
+	  (list "current story points" v)
+	  (cddr p))
+  ))
+
 (defun render-turn (game i)
   (let ((velocities (compute-velocitys-through-turn game i)))
     (list
@@ -345,11 +380,14 @@ O(defun choose-n-without-replacement (a n)
   "render the game in a visually attractive way"
   ;; We need to print an introduction that is not purely turn based.
   (let* ((turns (cdr (assoc 'turns game)))
-	 (n (length turns)))
+	 (n (length turns))
+	 (psyms (get-project-symbols game)))
     (list
      (list
       (cons "Projects:"
 	    (get-project-symbols game))
+      (list "Project Goals:"
+	    (mapcar (lambda (p) (pp-project-goals p game)) psyms)) 
       (cons "Teams:"
 	    (get-team-symbols game))
       (cons "Turns so far: "
@@ -379,6 +417,7 @@ O(defun choose-n-without-replacement (a n)
 (defun start-i ()
   (interactive)
   (setq game (start-game))
+;;  (setq assignment ())
   (pp (render-game game))
   )
 
