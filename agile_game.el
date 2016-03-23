@@ -95,15 +95,15 @@
 		("Rejuventation Treatement. All progress is secured at end of turn."
 		 Rejuvenation-Project
 		 (A  10 10)
-		 (B  10 10)
-		 (C  10 10)
-		 (D  10 10)
-		 (E  10 10)
-		 (F  10 10)		 
-		 (G  10 10)
-		 (H  10 10)
-		 (I  10 10)
-		 (J  10 10)
+		 (B  20 10)
+		 (C  30 10)
+		 (D  40 10)
+		 (E  50 10)
+		 (F  60 10)		 
+		 (G  70 10)
+		 (H  80 10)
+		 (I  90 10)
+		 (J  100 10)
 		)
 		("Giga-watt-hour super capacitor"
 		 Super-Capacitor-Project
@@ -233,9 +233,6 @@ O(defun choose-n-without-replacement (a n)
 	(team-cards (cdr (assoc 'team-cards turn))))
     ;; (print (cdr (assoc 'assignments turn)))
     ;; (print project)
-    (print team)
-    (print team-cards)
-
     (apply '+ (mapcar (lambda (element)
 		(let ((lteam (car element))
 		      (value (cdr element)))
@@ -350,13 +347,27 @@ O(defun choose-n-without-replacement (a n)
 ;; victory points are provided by this project, and the points to the next goal..
 ;; basically all of that requires a big of a re-org to get it all in a single
 ;; function basted on the project.
+(defun produce-symbolic-list-of-goals (goals velocity)
+;;  (reverse
+   (let (value)  ; make sure list starts empty
+    (dolist (element goals value)
+      (setq value
+	    (if (<= (cadr element) velocity)
+		(cons (list  "Goal: " (car element) " done with: " (cadr element) " Story Points for: " (car (cddr element)) " Victory Points")  value)
+	      (cons element value)))
+      ))
+;;   )
+  )
+
 (defun pp-project-goals (psym game)
   "Pretty print the psym goals with status"
   (let* ((p (get-project-from-sym psym (get-projects game)))
 	 (v (compute-velocity-project game psym)))
     (list psym
-	  (list "current story points" v)
-	  (cddr p))
+	  (list "current story points:" v)
+	  (produce-symbolic-list-of-goals (cddr p) v)
+;;	  (cddr p)
+	  )
   ))
 
 (defun render-turn (game i)
