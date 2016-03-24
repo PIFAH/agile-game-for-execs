@@ -46,15 +46,15 @@
 		 ])
 
 (setq global-events [
-		    ("Zombie Outbreak! Draw no velocity cards this turn!" Zombie-Outbreak (lambda (v) 0))
-		    ("Congress Mandates COBOL! Add 25 points to cost of every unachived goal." COBOL-Mandate (lambda (v) v))
-		    ("Flu Outbreak! Half-velocity this turn!" No-News-Is-Good-News (lambda (v) (/ v 2)))
-		    ("No news is good news." No-News-Is-Good-News (lambda (v) v))
-		    ("No news is good news." No-News-Is-Good-News (lambda (v) v))
-		    ("No news is good news." No-News-Is-Good-News (lambda (v) v))
-		    ("No news is good news." No-News-Is-Good-News (lambda (v) v))
-		    ("No news is good news." No-News-Is-Good-News (lambda (v) v))
-		    ("No news is good news." No-News-Is-Good-News (lambda (v) v))
+		    ("Congress Mandates COBOL! Add 50 points to cost of every unachieved goal in one of your projects." COBOL-Mandate (lambda (v) v) (lambda (cost) (+ 50 cost)))		     
+		    ("Zombie Outbreak! Draw no velocity cards this turn!" Zombie-Outbreak (lambda (v) 0) (lambda (v) v))
+		    ("Flu Outbreak! Half-velocity this turn!" No-News-Is-Good-News (lambda (v) (/ v 2)) (lambda (v) v))
+		    ("No news is good news." No-News-Is-Good-News (lambda (v) v) (lambda (v) v))
+		    ("No news is good news." No-News-Is-Good-News (lambda (v) v) (lambda (v) v))
+		    ("No news is good news." No-News-Is-Good-News (lambda (v) v) (lambda (v) v))
+		    ("No news is good news." No-News-Is-Good-News (lambda (v) v) (lambda (v) v))
+		    ("No news is good news." No-News-Is-Good-News (lambda (v) v) (lambda (v) v))
+		    ("No news is good news." No-News-Is-Good-News (lambda (v) v) (lambda (v) v))
 		    ])
 
 (setq team-resources [
@@ -121,7 +121,7 @@
   (dotimes (number n value)
     (setq value (cons (choose-from-array a) value)))))
 
-O(defun choose-n-without-replacement (a n)
+(defun choose-n-without-replacement (a n)
   (let ((indices (number-sequence 0 (- (length a) 1))))
     (let (value)      ; otherwise a value is a void variable
       (dotimes (number n value)
@@ -140,7 +140,8 @@ O(defun choose-n-without-replacement (a n)
 	 ))
 
 (defun cons-game (projects teams turns)
-  `((projects . ,projects)
+  ;; we have to copy the projects because we destructively change the goals.
+  `((projects . ,(copy-tree projects t))
     (teams . ,teams)
     (victory-points . 0)
     (turns . ,turns)))
@@ -215,7 +216,13 @@ O(defun choose-n-without-replacement (a n)
   (let* ((teams (cdr (assoc 'teams game)))
 	 (turns (cdr (assoc 'turns game)))
 	 (turn-num (+ 1 (length turns)))
-	 (turn (create-turn alist (list (cdr (choose-global-event global-events))))))
+	 (event (cdr (choose-global-event global-events)))
+	 (turn (create-turn alist (list event)))
+	 ;; TODO: choosing the first one here is not as much fun as random..
+	 (psyms (get-project-symbols game))
+	 (psym (nth (random (length psyms)) psyms)) 
+	 (fun (car (cddr event))))
+    (adjust-unsecured-project-goals psym game fun)
     (let* ((team-events (exec-team-event-draws game turn teams))
 	   (new-game 
 	    (add-turn-and-events game turn team-events)))
@@ -348,7 +355,6 @@ O(defun choose-n-without-replacement (a n)
 ;; basically all of that requires a big of a re-org to get it all in a single
 ;; function basted on the project.
 (defun produce-symbolic-list-of-goals (goals velocity)
-;;  (reverse
    (let (value)  ; make sure list starts empty
     (dolist (element goals value)
       (setq value
@@ -356,8 +362,16 @@ O(defun choose-n-without-replacement (a n)
 		(cons (list  "Goal: " (car element) " done with: " (cadr element) " Story Points for: " (car (cddr element)) " Victory Points")  value)
 	      (cons element value)))
       ))
-;;   )
-  )
+   )
+
+;; Ugh --- this shouldn't use setf, we need to create a new game here!
+(defun adjust-goals (goals velocity fun)
+  (let (value)  ; make sure list starts empty
+    (dolist (element goals value)
+      (if (not (<= (cadr element) velocity))
+	  (progn
+	    (setf (car (cdr element)) (funcall fun (car (cdr element))))
+	    )))))
 
 (defun pp-project-goals (psym game)
   "Pretty print the psym goals with status"
@@ -366,9 +380,16 @@ O(defun choose-n-without-replacement (a n)
     (list psym
 	  (list "current story points:" v)
 	  (produce-symbolic-list-of-goals (cddr p) v)
-;;	  (cddr p)
 	  )
-  ))
+    ))
+
+(defun adjust-unsecured-project-goals (psym game fun)
+  "Adjust unsecured project goals for psym"
+  (let* ((p (get-project-from-sym psym (get-projects game)))
+	 (v (compute-velocity-project game psym)))
+	  (adjust-goals (cddr p) v fun)
+	  )
+  )
 
 (defun render-turn (game i)
   (let ((velocities (compute-velocitys-through-turn game i)))
@@ -428,11 +449,12 @@ O(defun choose-n-without-replacement (a n)
 (defun start-i ()
   (interactive)
   (setq game (start-game))
-;;  (setq assignment ())
+  (setq assignment ())
   (pp (render-game game))
   )
 
 (setq assignment '())
+
 ;; What we really want to do here is to construct the "assignment" of teams to projects.
 ;; We don't need to "play" the game in the mini buffer except to help with the typing of commands.
 ;; I'm happy entering lisp commands.
