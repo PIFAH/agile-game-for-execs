@@ -6,6 +6,9 @@
 ;; into a series of "decks".  There will be 6 turns in the game. After each turn,
 ;; The user can assign teams to projects.  The point of the game is to get a maximum
 ;; score based on reach user satisfaction goals.
+;; TODO: I need to figure out the easiest way to make this playable independently:
+;; either implement in LISP on an AWS server, or
+;; 
 
 ;; Every card starts with a title, a unique symobl and then includes functions that are to be applied in some way.
 (setq team-events [
@@ -66,12 +69,21 @@
 		       Elite-Team
 		       (lambda (game turn)
 			 (list (draw-velocity) (draw-velocity))))
+		      ("Test-Driven-Team. Draw 2 Velocity Cards, no card is ever zero. Draw 1 Discovery Card on Even-numbered Rounds."
+		       Test-Driven-Team
+		       (lambda (game turn)
+			 (list (max (draw-velocity) 10) (max (draw-velocity) 10))))
 		      ("User-focused Team. Draw 1 Velocity Card. Draw 1 Discovery Card every Turn."
 		       User-Focused-Team
 		      (lambda (game turn)
 			  (list (draw-velocity))))
-		      ("Weak Team. Draw 1 Velocity Card and substract 5 from it."
-		       Weak-Team
+		      ("Blame Culture Team. Draw 1 Velocity Card and substract 5 from it."
+		       Blame-Culture-Team
+		      (lambda (game turn)
+			(list (- (draw-velocity) 5))))
+		      ;; TODO: These rules are not correct, need to add in randomness!!
+		      ("Insecure Team. Draw 2 Velocity cards 50% of the time, 0 in other case. Draw 1 Discovery Card on Odd-numbered Rounds."
+		       Insecure-Team
 		      (lambda (game turn)
 			  (list (- (draw-velocity) 5))))
 		      ("Erratic Team. Draw 2 Velocity cards 50% of the time, 0 in other case. Draw 1 Discovery Card on Odd-numbered Rounds."
@@ -82,7 +94,7 @@
 
 (setq projects [
 		("Faster-than-light drive."
-		 FTL-Project
+		FTL-Project
 		 (A 30 30)
 		 (B 100 100)
 		 (C 200 200)
