@@ -1,0 +1,143 @@
+<!DOCTYPE html>
+    <meta charset="utf-8">
+    <!-- This file Copyright Robert L. Read, 2016,  licensed as GNU General Public License, Version 3 -->    
+    <!-- copied from https://bl.ocks.org/mbostock/3885304, licensed as GNU General Public License, Version 3 -->
+        <head>
+    <script src="https://d3js.org/d3.v3.min.js" charset="utf-8"></script>    
+    <script src="https://code.jquery.com/jquery-1.12.0.min.js"></script>
+    <script src="https://code.jquery.com/jquery-migrate-1.2.1.min.js"></script>
+    </head>
+
+<style>
+
+.bar {
+  fill: steelblue;
+}
+
+.bar:hover {
+  fill: brown;
+}
+
+.axis {
+  font: 10px sans-serif;
+}
+
+.axis path,
+.axis line {
+  fill: none;
+  stroke: #000;
+  shape-rendering: crispEdges;
+}
+
+.x.axis path {
+  display: none;
+}
+
+</style>
+    <body>
+    <div class="container">
+    </div>
+    <button onclick="myFunction()">Start Game</button>
+    <button onclick="executeTurn()">Execute Turn</button>
+    </body>
+
+<script>
+
+var data = [];
+
+
+
+var NUM_TURNS = 6;
+
+for(var i = 0; i < NUM_TURNS; i++) {
+    data[i] = {letter: "Sprint "+i, frequency: 0.0 };
+}
+
+var turn_number = 0;
+
+function draw(data,name) {
+    var margin = {top: 20, right: 20, bottom: 30, left: 40},
+	width = 960 - margin.left - margin.right,
+	height = 200 - margin.top - margin.bottom;
+
+    var svg = d3.select("body").select(name).append("svg")
+	.attr("width", width + margin.left + margin.right)
+	.attr("height", height + margin.top + margin.bottom)
+	.append("g")
+	.attr("transform", "translate(" + margin.left + "," + margin.top + ")");
+
+    var x = d3.scale.ordinal()
+	.rangeRoundBands([0, width], .1);
+
+    var y = d3.scale.linear()
+	.range([height, 0]);
+
+    var xAxis = d3.svg.axis()
+	.scale(x)
+	.orient("bottom");
+
+    var yAxis = d3.svg.axis()
+	.scale(y)
+	.orient("left")
+	.ticks(10, "%");
+
+    x.domain(data.map(function(d) { return d.letter; }));
+    y.domain([0, d3.max(data, function(d) { return d.frequency; })]);
+
+    svg.append("g")
+	.attr("class", "x axis")
+	.attr("transform", "translate(0," + height + ")")
+	.call(xAxis);
+
+    svg.append("g")
+	.attr("class", "y axis")
+	.call(yAxis)
+	.append("text")
+	.attr("transform", "rotate(-90)")
+	.attr("y", 6)
+	.attr("dy", ".71em")
+	.style("text-anchor", "end")
+	.text("Frequency");
+
+    svg.selectAll(".bar")
+  	.data(data)
+  	.enter().append("rect")
+  	.attr("class", "bar")
+  	.attr("x", function(d) { return x(d.letter); })
+  	.attr("width", x.rangeBand())
+  	.attr("y", function(d) { return y(d.frequency); })
+  	.attr("height", function(d) { return height - y(d.frequency); });
+
+    return svg;
+};
+
+function type(d) {
+  d.frequency = +d.frequency;
+  return d;
+}
+
+function myFunction() {
+    // We need to create the divs that we will load
+    for(var i = 0; i < 3; i++) {
+	var name = "spud" + i;
+	$( ".container" ).append( $( "<div class='burndown' id='" + name + "'/>"  ) );
+	draw(data,"#" + name);
+    }
+}
+
+function getRidOfSpace() {
+    $( ".container" ).empty();
+}
+
+function executeTurn() {
+    // This is a crummy version of executing a turn, we'll just add
+    // a some data...
+    getRidOfSpace();
+    
+    data[turn_number] = {letter: "Sprint "+turn_number, frequency: Math.random() };
+    turn_number++;
+
+    myFunction();
+}
+
+</script>
