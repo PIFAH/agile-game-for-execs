@@ -43,20 +43,418 @@
 
 <script>
 
-var data = [];
+// Now we will attempt to reconstruct the game mechanics in javascript from the LISP code that I developed
+
+var team_events = [
+    ["Lead Developer wins lottery and joins Peace Corps. Zero Velocity this turn for Team.",
+     "lead-developer-joins-peace-corps",
+     function f(vcards) { return 0;}
+    ],
+    ["Estimates aren't ALWAYS low. Double Velocity this turn for Team.",
+     "estimates-are-not-always-low",
+     function f(vcards) { return 0;}
+    ],
+    ["Pivot: Halve the cost of any one goal.",
+     "halve-the-cost-of-one-goal",
+     // Someohow here we want to get input as to which goal to halve
+     function f(vcards) { return 0;}
+    ],
+    ["Automated Testing Expert joins Team. While in play, no velocity card is ever less than 10.",
+     "automate-testing-expert-joins-team",
+     function f(vcards) { return 0;}
+    ],
+    ["Top-notch Agile Designer joins Team. Attach to any team for an extra discovery card each turn.",
+     "agile-developer-joins-team",
+     function f(vcards) { return 0;}
+    ]
+];
 
 
+var global_events = [
+    ["Congress Mandates COBOL! Add 50 points to cost of every unachieved goal in one of your projects.",
+     "COBOL-Mandate",
+     function f(v) {return v;},
+     function f(cost) {return 50+cost;}],
+    ["Zombie Outbreak! Draw no velocity cards this turn!",
+     "Zombie-Outbreak",
+     function f(v) {return 0;},
+     function f(v) {return v;}],
+    ["Flu Outbreak! Half-velocity this turn!",
+     "No-News-Is-Good-News",
+     function f(v) { return v / 2; },
+     function f(v) {return v;}     
+    ],
+    ["No news is good news.",
+     "No-News-Is-Good-News",
+     function (v) { return v; },
+     function (v) { return v; }
+    ]
+];
 
-var NUM_TURNS = 6;
 
-for(var i = 0; i < NUM_TURNS; i++) {
-    data[i] = {letter: "Sprint "+i, frequency: 0.0 };
+/* https://gist.github.com/kerimdzhanov/7529623 */
+/**
+ * Get a random floating point number between `min` and `max`.
+ * 
+ * @param {number} min - min number
+ * @param {number} max - max number
+ * @return {float} a random floating point number
+ */
+function getRandom(min, max) {
+  return Math.random() * (max - min) + min;
 }
+
+/**
+ * Get a random integer between `min` and `max`.
+ * 
+ * @param {number} min - min number
+ * @param {number} max - max number
+ * @return {int} a random integer
+ */
+function getRandomInt(min, max) {
+  return Math.floor(Math.random() * (max - min + 1) + min);
+}
+
+function draw_velocity() {
+    return 10 * getRandomInt(0,3);
+}
+
+var team_resources  = [
+    ["Average Team. Draw 1 Velocity Card. Draw 1 Discovery Card on Even-numbered Rounds.",
+     "Average-Team",
+     function f(game,turn) {
+	return [draw_velocity(),draw_velocity()]
+     }
+    ],
+    ["Elite Team. Draw 2 Velocity Cards. Draw 1 Discovery Card on Even-numbered Rounds.",
+     "Elite-Team",
+     function f(game,turn) {
+	return [draw_velocity(),draw_velocity()]
+     }
+    ],
+    ["Test-Driven-Team. Draw 2 Velocity Cards, no card is ever zero. Draw 1 Discovery Card on Even-numbered Rounds.",
+     "Test-Driven-Team",
+     function f(game,turn) {
+	 return [Math.max(10,draw_velocity()),Math.max(10,draw_velocity())];
+      }
+    ],
+    ["User-focused Team. Draw 1 Velocity Card. Draw 1 Discovery Card every Turn.",
+     "User-Focused-Team",
+     function f(game,turn) {
+	return [draw_velocity()]
+     }
+    ],
+    ["Blame Culture Team. Draw 1 Velocity Card and substract 5 from it.",
+     "Blame-Culture-Team",
+          function f(game,turn) {
+	      return [draw_velocity() - 5];
+	  }
+    ],
+    // TODO: These rules are not correct, need to add in randomness!!
+    ["Insecure Team. Draw 2 Velocity cards 50% of the time, 0 in other case. Draw 1 Discovery Card on Odd-numbered Rounds.",
+     "Insecure-Team",
+     function f(game,turn) {
+	 return [draw_velocity() - 5];
+     }
+    ],
+    ["Erratic Team. Draw 2 Velocity cards 50% of the time, 0 in other case. Draw 1 Discovery Card on Odd-numbered Rounds.",
+     "Erratic-Team",
+     function f(game,turn) {
+	 return [draw_velocity() - 5];
+     }
+    ]
+];
+
+var projects = [
+    ["Faster-than-light drive.",
+     "FTL-Project",
+     ["A",30,30],
+     ["B",100,100],
+     ["C",200,200]
+    ],
+    ["Pocket Fusion Generator.",
+     "Pocket-Fusion-Project",
+     ["A",75,75],
+     ["B",150,150]
+    ],
+    ["Rejuventation Treatement. All progress is secured at end of turn.",
+     "Rejuvenation-Project",
+     ["A", 10, 10],
+     ["B", 20, 10],
+     ["C", 30, 10],
+     ["D", 40, 10],
+     ["E", 50, 10],
+     ["F", 60, 10],		 
+     ["G", 70, 10],
+     ["H", 80, 10],
+     ["I", 90, 10],
+     ["J", 100, 10]
+    ],
+    ["Giga-watt-hour super capacitor",
+     "Super-Capacitor-Project",
+     ["A", 10, 10],
+     ["B", 100, 100],
+     ["C", 150, 150]
+    ]
+];
+
+
+// http://stackoverflow.com/questions/4550505/getting-random-value-from-an-array
+Array.prototype.randomElement = function () {
+    return this[Math.floor(Math.random() * this.length)]
+}
+
+function choose_n_with_replacement(a,n) {
+    var result = [];
+    for(var i = 0; i < n; i++ ) {
+	result[i] = a.randomElement();
+    }
+    return result;
+}
+
+function choose_n_without_replacement(a,n) {
+    var result = [];
+    var indices = [];
+    var b = a.slice();
+    for(var i = 0; i < n; i++ ) {
+	index = Math.floor(Math.random() * b.length);
+	result[i] = b[index];
+	b.splice(index,1);
+    }
+    return result;
+}
+
+function cons_game(projects,teams,event,turns) {
+    return { projects: projects.slice(),
+	     global_cards: global_events,
+	     teams: teams,
+	     turns: turns};
+}
+var NUM_PROJECTS = 3;
+var NUM_TEAMS = 5;
+
+function start_game() {
+    // A game consists of projects, turns, resource assignments, etc.
+    return cons_game(choose_n_without_replacement(projects,NUM_PROJECTS),
+		     choose_n_without_replacement(team_resources,NUM_TEAMS),
+		     [],
+		     []);
+}
+
+function create_turn(alist,global_events) {
+    return {turn: { assignments: alist,
+		    global_cards: global_events,
+		    team_cards: [] }};
+}
+
+function exec_team_event_draws(game,turn,teams) {
+    var vel_func = turn.turn.global_cards[2];
+    var results = [];
+    for(var i = 0; i < teams.length; i++) {
+	var team = teams[i];
+	var draw_func = team[2];
+	var draws = draw_func(game,turn);
+	var draws_x = draws.map(vel_func);
+	var velocity = [team[1],draws_x];
+	console.log("Computer Velocity for Team:");
+	console.log(team[1]);
+	console.log("Wish them well....");
+	console.log(velocity);
+	console.log("...total story points");
+	results[i] = velocity;
+    }
+    return results;
+}
+
+function choose_global_event(global_event) {
+    var event = global_event.randomElement();
+    console.log("Let's see what is going on outside of your control...");
+    console.log("Drum roll please...");
+    console.log(event);
+    return event;
+}
+
+// This needs to be implemented, will probably have 
+function adjust_unsecured_project_goals(psym,game,fun) {
+}
+
+function get_project_from_sym(psym,projects) {
+    var n = projects.length;
+    for(var i = 0; i < n; i++) {
+	var p = projects[i];
+	if (p[1] === psym) return p;
+    }
+    // In our case, this is probably an error.
+    return null;
+}
+
+function compute_score(velocity,project) {
+    var sum = 0;
+    for(var i = 0; i < project.length-2; i++) {
+	var g = project[2+i];
+	var cost = g[1];
+	var vp = g[2];
+	if (velocity >= cost)
+	    sum += vp;
+    }
+    return sum;
+}
+
+function getKeyByValue(obj, value ) {
+    for( var prop in obj ) {
+        if( obj.hasOwnProperty( prop ) ) {
+             if( obj[ prop ] === value )
+                 return prop;
+        }
+    }
+}
+
+function summation(value) {
+    return value.reduce(function(a, b) {
+	return a + b;
+    });
+}
+
+function get_velocity(project,turnx) {
+    turn = turnx.turn;
+    var team = getKeyByValue(project,turn.assignments);
+    
+    var team_cards = turn.team_cards;
+    var sum = 0;
+    for(var i = 0; i < team_cards.length; i++) {
+	var element = team_cards[i];
+	var lteam = element[0];
+	var value = element[1];
+	var aproject = null;
+	for(var j = 0; j < turn.assignments.length; j++) {
+	    if (turn.assignments[j][0] === lteam) {
+		aproject = turn.assignments[j][1];
+	    }
+	}
+	if (project === aproject) {
+	    sum += summation(value);
+	} else {
+	    sum += 0;
+	}
+    }
+    return sum;
+}
+
+// (defun get-velocity (project turn)
+//   "Get the velocity for the project based on this turn."
+//   (let ((team (car (rassoc project (cdr (assoc 'assignments turn)))))
+// 	(team-cards (cdr (assoc 'team-cards turn))))
+//     (apply '+ (mapcar (lambda (element)
+// 		(let ((lteam (car element))
+// 		      (value (cdr element)))
+// 		  (if (equal
+// 		       project
+// 		       (cdr (assoc lteam (cdr (assoc 'assignments turn)))))
+// 		      (apply '+ value)
+// 		    0
+// 		    )))
+// 		   team-cards))
+//     ))
+
+function compute_velocity_project_through_turns(game,project,turns) {
+    var sum = 0;
+    for(var i = 0; i < turns.length; i++) {
+	var turn = turns[i];
+	sum += get_velocity(project,turn);
+    }
+    return sum;
+}
+
+function last_n(lst,n) {
+   return lst.slice((lst.length - 1) - n);
+}
+
+function compute_velocitys_through_turn(game,i) {
+ var turns = last_n(game.turns,i);
+  return get_projects(game).map(
+         function f(proj) {
+             var p = proj[1];
+	     // This is really a cons pair, very annoying in javascript...
+             var rest = compute_velocity_project_through_turns(game,p,turns);
+             return [p,rest];
+} );
+}
+
+
+function total_score(game) {
+    var turns = game.turns;
+    var n = turns.length;
+    var velocities = compute_velocitys_through_turn(game,n);
+    var vs = velocities.map(
+	function (element) {
+	    var psym = element[0];
+	    var v = element[1];
+	    var project = get_project_from_sym(psym,get_projects(game));
+	    return compute_score(v,project);
+	});
+}
+
+function add_turn_and_events(game,turn,events) {
+    var global_cards = turn.global_cards;
+    var team_cards = turn.team_cards;
+    var assignments = turn.turn.assignments;
+    var turns = game.turns;
+    turns.unshift({turn: {assignments: assignments,
+			  global_cards: global_cards,
+			  team_cards: events}});
+    var new_game = cons_game(
+	game.projects,
+	game.teams,
+	[],
+	game.turns);
+    return new_game;
+}
+
+
+function get_projects(game) {
+    return game.projects;
+}
+
+function get_project_symbols(game) {
+    return get_projects(game).map(function (p) { return p[1]; });
+}
+
+function make_turn(game,alist) {
+    var teams = game.teams;
+    var turns = game.turns;
+    var turn_num = 1 + turns.length;
+    var event = choose_global_event(global_events);
+    var turn = create_turn(alist,event);
+    var psyms = get_project_symbols(game);
+    var psym = psyms.randomElement();
+    var fun = event[2];
+    adjust_unsecured_project_goals(psym,game,fun);
+    var team_events = exec_team_event_draws(game,turn,teams);
+    var new_game = add_turn_and_events(game,turn,team_events);
+    new_game.victory_points = total_score(new_game);
+    return new_game;
+}
+
+
+
+var MAX_NUM_TURNS = 6;
+
+
+var data = new Array(NUM_PROJECTS);
+
+
+for(var i = 0; i < NUM_PROJECTS; i++) {
+    data[i] = new Array(MAX_NUM_TURNS);
+    for(var j = 0; j < MAX_NUM_TURNS; j++) {
+	data[i][j] = {letter: "Sprint "+i, velocity: 0.0 };
+    }
+}
+
 
 var turn_number = 0;
 
-function draw(data,name) {
-    var margin = {top: 20, right: 20, bottom: 30, left: 40},
+function draw(data,name,title) {
+    var margin = {top: 20*2, right: 20, bottom: 30, left: 40},
 	width = 960 - margin.left - margin.right,
 	height = 200 - margin.top - margin.bottom;
 
@@ -70,7 +468,7 @@ function draw(data,name) {
 	.rangeRoundBands([0, width], .1);
 
     var y = d3.scale.linear()
-	.range([height, 0]);
+    	.range([height, 0]);
 
     var xAxis = d3.svg.axis()
 	.scale(x)
@@ -79,10 +477,13 @@ function draw(data,name) {
     var yAxis = d3.svg.axis()
 	.scale(y)
 	.orient("left")
-	.ticks(10, "%");
+	.ticks(10)
+    ;
 
     x.domain(data.map(function(d) { return d.letter; }));
-    y.domain([0, d3.max(data, function(d) { return d.frequency; })]);
+    y.domain([0, d3.max(data, function(d) { return d.velocity; })]);
+    y.domain([0, Math.max(200,d3.max(data, function(d) { return d.velocity; }))]);
+
 
     svg.append("g")
 	.attr("class", "x axis")
@@ -97,7 +498,7 @@ function draw(data,name) {
 	.attr("y", 6)
 	.attr("dy", ".71em")
 	.style("text-anchor", "end")
-	.text("Frequency");
+	.text("Velocity");
 
     svg.selectAll(".bar")
   	.data(data)
@@ -105,23 +506,56 @@ function draw(data,name) {
   	.attr("class", "bar")
   	.attr("x", function(d) { return x(d.letter); })
   	.attr("width", x.rangeBand())
-  	.attr("y", function(d) { return y(d.frequency); })
-  	.attr("height", function(d) { return height - y(d.frequency); });
+  	.attr("y", function(d) { return y(d.velocity); })
+  	.attr("height", function(d) { return height - y(d.velocity); });
 
+    svg.append("text")
+        .attr("x", (width / 2))             
+        .attr("y", 0 - (margin.top / 2))
+        .attr("text-anchor", "middle")  
+        .style("font-size", "16px") 
+        .style("text-decoration", "underline")  
+        .text(title);
+    console.log(title);
     return svg;
 };
 
 function type(d) {
-  d.frequency = +d.frequency;
+  d.velocity = +d.velocity;
   return d;
 }
 
+var game = null;
+// This is just a silly set of assignments to start with
+var assignment = [];
+
+
 function myFunction() {
+    game = start_game();
+
+    // let's create some randome assignments...
+    var init_assignments = [];
+    var teams = game.teams;
+    for(var i = 0; i < teams.length; i++) {
+	var team = teams[i];
+	var project = game.projects.randomElement()[1];
+	init_assignments.push([team[1],project]);
+    }
+    game.assignments = init_assignments;
+    redraw(game);
+}
+
+function redraw(game) {
     // We need to create the divs that we will load
-    for(var i = 0; i < 3; i++) {
+    var projects = get_projects(game);
+    for(var i = 0; i < projects.length; i++) {
 	var name = "spud" + i;
+	var project = projects[i];
+	
 	$( ".container" ).append( $( "<div class='burndown' id='" + name + "'/>"  ) );
-	draw(data,"#" + name);
+	// Now generate data for this project...
+	// Pass in the project title...
+	draw(data[i],"#" + name,project[1]);
     }
 }
 
@@ -133,11 +567,23 @@ function executeTurn() {
     // This is a crummy version of executing a turn, we'll just add
     // a some data...
     getRidOfSpace();
+
+    // This takes an association list of teams associated to projects...
+    // will deal with that later
+    make_turn(game,game.assignments);
+
     
-    data[turn_number] = {letter: "Sprint "+turn_number, frequency: Math.random() };
+    var velocities = compute_velocitys_through_turn(game,turn_number);
+    console.log(velocities);
+    
+    for(var i = 0; i < game.projects.length; i++) {
+	var v = velocities[i][1];
+	console.log("v = "+v+" i = "+i);
+	data[i][turn_number] = {letter: "Sprint "+turn_number, velocity: v};
+    }
     turn_number++;
 
-    myFunction();
+    redraw(game);
 }
 
 </script>
