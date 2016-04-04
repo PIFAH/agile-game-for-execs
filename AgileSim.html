@@ -35,8 +35,10 @@
 
 </style>
     <body>
+    <h1><center>Victory Points:<span id="score"></span></center></h1>
     <div class="container">
     </div>
+    
     <button onclick="myFunction()">Start Game</button>
     <button onclick="executeTurn()">Execute Turn</button>
     </body>
@@ -288,18 +290,22 @@ function get_project_from_sym(psym,projects) {
     return null;
 }
 
+// TODO: This is fuboar
 function compute_score(velocity,project) {
     var sum = 0;
     for(var i = 0; i < project.length-2; i++) {
 	var g = project[2+i];
 	var cost = g[1];
 	var vp = g[2];
+	console.log("cost = "+ cost);
+	console.log("vp = "+ vp);
 	if (velocity >= cost)
 	    sum += vp;
     }
     return sum;
 }
 
+// This needs to be replaced with something that allows multiples to be returned and processed.
 function getKeyByValue(obj, value ) {
     for( var prop in obj ) {
         if( obj.hasOwnProperty( prop ) ) {
@@ -307,6 +313,17 @@ function getKeyByValue(obj, value ) {
                  return prop;
         }
     }
+}
+
+function getKeysByValue(obj, value) {
+    var results = [];
+    for( var prop in obj ) {
+        if( obj.hasOwnProperty( prop ) ) {
+             if( obj[ prop ] === value )
+                 results.push(prop);
+        }
+    }
+    return results;
 }
 
 function summation(value) {
@@ -317,6 +334,7 @@ function summation(value) {
 
 function get_velocity(project,turnx) {
     turn = turnx.turn;
+    // TODO: probably should swap out with the plural version above...
     var team = getKeyByValue(project,turn.assignments);
     
     var team_cards = turn.team_cards;
@@ -365,12 +383,12 @@ function compute_velocity_project_through_turns(game,project,turns) {
     return sum;
 }
 
-function last_n(lst,n) {
-   return lst.slice((lst.length - 1) - n);
+function first_n(lst,n) {
+    return lst.slice(0,(n-1));
 }
 
 function compute_velocitys_through_turn(game,i) {
- var turns = last_n(game.turns,i);
+ var turns = first_n(game.turns,i);
   return get_projects(game).map(
          function f(proj) {
              var p = proj[1];
@@ -383,8 +401,10 @@ function compute_velocitys_through_turn(game,i) {
 
 function total_score(game) {
     var turns = game.turns;
-    var n = turns.length;
+    var n = turns.length-1;
     var velocities = compute_velocitys_through_turn(game,n);
+    console.log("velocities");
+    console.log(velocities);
     var vs = velocities.map(
 	function (element) {
 	    var psym = element[0];
@@ -392,6 +412,8 @@ function total_score(game) {
 	    var project = get_project_from_sym(psym,get_projects(game));
 	    return compute_score(v,project);
 	});
+    console.log(vs);
+    return vs;
 }
 
 function add_turn_and_events(game,turn,events) {
@@ -457,6 +479,7 @@ function draw(data,name,title) {
     var margin = {top: 20*2, right: 20, bottom: 30, left: 40},
 	width = 960 - margin.left - margin.right,
 	height = 200 - margin.top - margin.bottom;
+
 
     var svg = d3.select("body").select(name).append("svg")
 	.attr("width", width + margin.left + margin.right)
@@ -529,7 +552,7 @@ var game = null;
 // This is just a silly set of assignments to start with
 var assignment = [];
 
-
+// If the game already exists, this should really do a restart....
 function myFunction() {
     game = start_game();
 
@@ -548,15 +571,32 @@ function myFunction() {
 function redraw(game) {
     // We need to create the divs that we will load
     var projects = get_projects(game);
+
+    $( ".container" ).append( $( "<div class='unassigned'/>"  ) );
+    // Now let's inject the teams....
+    for(var i = 0; i < game.teams.length; i++) {
+	var team = game.teams[i];
+	$(".unassigned").append( $( "<div><p>"+ team[1]+ "</p></div>"));
+    }
     for(var i = 0; i < projects.length; i++) {
-	var name = "spud" + i;
 	var project = projects[i];
-	
+	var name = "spud" + i;
+	var team = "don't know";
 	$( ".container" ).append( $( "<div class='burndown' id='" + name + "'/>"  ) );
+
+	// Some how I have to get the teams from the game.assigments list....
+	for(var j = 0; j < game.assignments.length; j++) {
+	    var assignment = game.assignments[j];
+	    if (assignment[1] === project[1]) {
+		$( ".container" ).append( $( "<div class='team_area' id='" + name + "'>"+assignment[0]+"</div>"  ));
+	    }
+	}
+	
 	// Now generate data for this project...
 	// Pass in the project title...
 	draw(data[i],"#" + name,project[1]);
     }
+    $("#score").text(""+summation(total_score(game)));
 }
 
 function getRidOfSpace() {
@@ -581,9 +621,10 @@ function executeTurn() {
 	console.log("v = "+v+" i = "+i);
 	data[i][turn_number] = {letter: "Sprint "+turn_number, velocity: v};
     }
-    turn_number++;
 
     redraw(game);
+
+    turn_number++;    
 }
 
 </script>
