@@ -118,7 +118,7 @@ function getRandomInt(min, max) {
 }
 
 function draw_velocity() {
-    return 10 * getRandomInt(0,3);
+    return 10 * getRandomInt(0,2);
 }
 
 var team_resources  = [
@@ -258,7 +258,7 @@ function exec_team_event_draws(game,turn,teams) {
 	var draws = draw_func(game,turn);
 	var draws_x = draws.map(vel_func);
 	var velocity = [team[1],draws_x];
-	console.log("Computer Velocity for Team:");
+	console.log("Compute Velocity for Team:");
 	console.log(team[1]);
 	console.log("Wish them well....");
 	console.log(velocity);
@@ -270,9 +270,16 @@ function exec_team_event_draws(game,turn,teams) {
 
 function choose_global_event(global_event) {
     var event = global_event.randomElement();
-    console.log("Let's see what is going on outside of your control...");
-    console.log("Drum roll please...");
-    console.log(event);
+    // Let's Blank the screen and render this with a sleep as a big deal....
+    getRidOfSpace();
+    $( ".container" ).append( $( "<h1> "+"Let's see what is going on outside of your control..."+"</h1>"  ) );
+    $( ".container" ).append( $( "<h1> "+"Drum roll please..."+"</h1>"  ) );
+
+    // Apparently this is dangerous, but I don't really want to rewrite everything
+    // in a continuation style.... I suppose rendering a button would be a way to do this...
+
+
+    
     return event;
 }
 
@@ -297,8 +304,6 @@ function compute_score(velocity,project) {
 	var g = project[2+i];
 	var cost = g[1];
 	var vp = g[2];
-	console.log("cost = "+ cost);
-	console.log("vp = "+ vp);
 	if (velocity >= cost)
 	    sum += vp;
     }
@@ -358,50 +363,41 @@ function get_velocity(project,turnx) {
     return sum;
 }
 
-// (defun get-velocity (project turn)
-//   "Get the velocity for the project based on this turn."
-//   (let ((team (car (rassoc project (cdr (assoc 'assignments turn)))))
-// 	(team-cards (cdr (assoc 'team-cards turn))))
-//     (apply '+ (mapcar (lambda (element)
-// 		(let ((lteam (car element))
-// 		      (value (cdr element)))
-// 		  (if (equal
-// 		       project
-// 		       (cdr (assoc lteam (cdr (assoc 'assignments turn)))))
-// 		      (apply '+ value)
-// 		    0
-// 		    )))
-// 		   team-cards))
-//     ))
-
 function compute_velocity_project_through_turns(game,project,turns) {
     var sum = 0;
+
     for(var i = 0; i < turns.length; i++) {
 	var turn = turns[i];
-	sum += get_velocity(project,turn);
+	var v = get_velocity(project,turn);
+	console.log("project = "+project)
+	console.log("turn = "+turn)
+	console.log("v = "+v)
+	sum += v;
     }
     return sum;
 }
 
 function first_n(lst,n) {
-    return lst.slice(0,(n-1));
+    return lst.slice(0,n);
 }
 
 function compute_velocitys_through_turn(game,i) {
- var turns = first_n(game.turns,i);
+    var turns = first_n(game.turns,i);
+        console.log("i = "+i);
+    console.log("turns = "+turns);
   return get_projects(game).map(
          function f(proj) {
              var p = proj[1];
 	     // This is really a cons pair, very annoying in javascript...
              var rest = compute_velocity_project_through_turns(game,p,turns);
              return [p,rest];
-} );
+       } );
 }
 
 
 function total_score(game) {
     var turns = game.turns;
-    var n = turns.length-1;
+    var n = turns.length;
     var velocities = compute_velocitys_through_turn(game,n);
     console.log("velocities");
     console.log(velocities);
@@ -446,6 +442,22 @@ function make_turn(game,alist) {
     var turns = game.turns;
     var turn_num = 1 + turns.length;
     var event = choose_global_event(global_events);
+    setTimeout(function f() {
+	intermediate(event,game,alist,teams,turns,turn_num,event);
+    },2000);
+}
+
+function intermediate(event,game,alist,teams,turns,turn_num,event) {
+    $( ".container" ).append( $( "<h1 style='{color: red; }'> "+event[0]+"</h1>"  ) );
+    setTimeout(function f() {
+	getRidOfSpace();
+	complete_turn(event,game,alist,teams,turns,turn_num,event);
+    },3000);
+}
+
+function complete_turn(event,game,alist,teams,turns,turn_num,event) {
+    // TODO: It seems that here I would have to break this into a a continuation-style
+    // double function if I want this work with a dramatic pause.
     var turn = create_turn(alist,event);
     var psyms = get_project_symbols(game);
     var psym = psyms.randomElement();
@@ -454,6 +466,22 @@ function make_turn(game,alist) {
     var team_events = exec_team_event_draws(game,turn,teams);
     var new_game = add_turn_and_events(game,turn,team_events);
     new_game.victory_points = total_score(new_game);
+
+    var velocities = compute_velocitys_through_turn(game,turn_number+1);
+    
+    console.log("turn = "+turn_number);
+    console.log(velocities);
+    
+    for(var i = 0; i < game.projects.length; i++) {
+	var v = velocities[i][1];
+	console.log("i = " +i+ " v = "+v);
+	data[i][turn_number] = {letter: "Sprint "+turn_number, velocity: v};
+    }
+
+    redraw(game);
+
+    turn_number++;    
+
     return new_game;
 }
 
@@ -468,7 +496,7 @@ var data = new Array(NUM_PROJECTS);
 for(var i = 0; i < NUM_PROJECTS; i++) {
     data[i] = new Array(MAX_NUM_TURNS);
     for(var j = 0; j < MAX_NUM_TURNS; j++) {
-	data[i][j] = {letter: "Sprint "+i, velocity: 0.0 };
+	data[i][j] = {letter: "Sprint "+j, velocity: 0.0 };
     }
 }
 
@@ -476,6 +504,10 @@ for(var i = 0; i < NUM_PROJECTS; i++) {
 var turn_number = 0;
 
 function draw(data,name,title) {
+    
+    console.log(data);
+
+    
     var margin = {top: 20*2, right: 20, bottom: 30, left: 40},
 	width = 960 - margin.left - margin.right,
 	height = 200 - margin.top - margin.bottom;
@@ -539,7 +571,6 @@ function draw(data,name,title) {
         .style("font-size", "16px") 
         .style("text-decoration", "underline")  
         .text(title);
-    console.log(title);
     return svg;
 };
 
@@ -613,18 +644,6 @@ function executeTurn() {
     make_turn(game,game.assignments);
 
     
-    var velocities = compute_velocitys_through_turn(game,turn_number);
-    console.log(velocities);
-    
-    for(var i = 0; i < game.projects.length; i++) {
-	var v = velocities[i][1];
-	console.log("v = "+v+" i = "+i);
-	data[i][turn_number] = {letter: "Sprint "+turn_number, velocity: v};
-    }
-
-    redraw(game);
-
-    turn_number++;    
 }
 
 </script>
