@@ -30,7 +30,11 @@
 }
 
 .x.axis path {
-  display: none;
+    display: none;
+}
+
+.project {
+    margin: 40px;
 }
 
 </style>
@@ -123,44 +127,44 @@ function draw_velocity() {
 
 var team_resources  = [
     ["Average Team. Draw 1 Velocity Card. Draw 1 Discovery Card on Even-numbered Rounds.",
-     "Average-Team",
+     "Average_Team",
      function f(game,turn) {
 	return [draw_velocity(),draw_velocity()]
      }
     ],
     ["Elite Team. Draw 2 Velocity Cards. Draw 1 Discovery Card on Even-numbered Rounds.",
-     "Elite-Team",
+     "Elite_Team",
      function f(game,turn) {
 	return [draw_velocity(),draw_velocity()]
      }
     ],
     ["Test-Driven-Team. Draw 2 Velocity Cards, no card is ever zero. Draw 1 Discovery Card on Even-numbered Rounds.",
-     "Test-Driven-Team",
+     "Test_Driven_Team",
      function f(game,turn) {
 	 return [Math.max(10,draw_velocity()),Math.max(10,draw_velocity())];
       }
     ],
     ["User-focused Team. Draw 1 Velocity Card. Draw 1 Discovery Card every Turn.",
-     "User-Focused-Team",
+     "User_Focused_Team",
      function f(game,turn) {
 	return [draw_velocity()]
      }
     ],
     ["Blame Culture Team. Draw 1 Velocity Card and substract 5 from it.",
-     "Blame-Culture-Team",
+     "Blame_Culture_Team",
           function f(game,turn) {
 	      return [draw_velocity() - 5];
 	  }
     ],
     // TODO: These rules are not correct, need to add in randomness!!
     ["Insecure Team. Draw 2 Velocity cards 50% of the time, 0 in other case. Draw 1 Discovery Card on Odd-numbered Rounds.",
-     "Insecure-Team",
+     "Insecure_Team",
      function f(game,turn) {
 	 return [draw_velocity() - 5];
      }
     ],
     ["Erratic Team. Draw 2 Velocity cards 50% of the time, 0 in other case. Draw 1 Discovery Card on Odd-numbered Rounds.",
-     "Erratic-Team",
+     "Erratic_Team",
      function f(game,turn) {
 	 return [draw_velocity() - 5];
      }
@@ -598,36 +602,124 @@ function myFunction() {
     game.assignments = init_assignments;
     redraw(game);
 }
+// Okay, now I have to figure out how to make these actually change the assignment....
+function moveDown() {
+    // find the current project position....
+    var psym;
+    var team = $(this).attr('id');
+    for(var j = 0; j < game.assignments.length; j++) {
+	var assignment = game.assignments[j];
+	if (assignment[0] === team) {
+	    psym = assignment[1];
+	} 
+    }
+    var projects = get_projects(game);
+    var n = -1;
+    for(var i = 0; i < projects.length; i++) {
+	var p = projects[i];
+	if (psym === p[1]) {
+	    n = i;
+	}
+    }
+    var pos = n;
+    
+    // if it won't go outside range, put into new position...
+    if (pos > 0) {
+	// remove the team from the assignments array....
+	for(var i = game.assignments.length - 1; i >= 0; i--) {
+	    if(game.assignments[i][0] === team) {
+		game.assignments.splice(i, 1);
+	    }
+	}
+	// the put it back against the next project.
+	game.assignments.push([team,projects[pos-1][1]]);
+    }
+    redraw(game);
+}
+
+function moveUp() {
+    // find the current project position....
+    var psym;
+    var team = $(this).attr('id');
+    for(var j = 0; j < game.assignments.length; j++) {
+	var assignment = game.assignments[j];
+	if (assignment[0] === team) {
+	    psym = assignment[1];
+	} 
+    }
+    var projects = get_projects(game);
+    var n = -1;
+    for(var i = 0; i < projects.length; i++) {
+	var p = projects[i];
+	if (psym === p[1]) {
+	    n = i;
+	}
+    }
+    var pos = n;
+    
+    // if it won't go outside range, put into new position...
+    if (pos < (projects.length - 1)) {
+	// remove the team from the assignments array....
+	for(var i = game.assignments.length - 1; i >= 0; i--) {
+	    if(game.assignments[i][0] === team) {
+		game.assignments.splice(i, 1);
+	    }
+	}
+	// the put it back against the next project.
+	game.assignments.push([team,projects[pos+1][1]]);
+    }
+    redraw(game);
+}
+
+function renderTeam(team_id) {
+    return $( "<div><button class='moveup' id='"+team_id+"'>Move Up</button><button class='movedn' id='"+team_id+"'>Move Down</button><p>"+ team_id+ "</p></div>");    
+}
 
 function redraw(game) {
+    getRidOfSpace();
     // We need to create the divs that we will load
     var projects = get_projects(game);
+    var total_scores = total_score(game);
 
-    $( ".container" ).append( $( "<div class='unassigned'/>"  ) );
-    // Now let's inject the teams....
-    for(var i = 0; i < game.teams.length; i++) {
-	var team = game.teams[i];
-	$(".unassigned").append( $( "<div><p>"+ team[1]+ "</p></div>"));
-    }
+    // $( ".container" ).append( $( "<div class='unassigned'/>"  ) );
+    // // Now let's inject the teams....
+    // for(var i = 0; i < game.teams.length; i++) {
+    // 	var team = game.teams[i];
+    // 	$(".unassigned").append( renderTeam(team,i));
+    // }
     for(var i = 0; i < projects.length; i++) {
+
 	var project = projects[i];
 	var name = "spud" + i;
-	var team = "don't know";
-	$( ".container" ).append( $( "<div class='burndown' id='" + name + "'/>"  ) );
+
+	$( ".container" ).append( $( "<div class='project' id='" + name + "'/>"));
 
 	// Some how I have to get the teams from the game.assigments list....
 	for(var j = 0; j < game.assignments.length; j++) {
 	    var assignment = game.assignments[j];
 	    if (assignment[1] === project[1]) {
-		$( ".container" ).append( $( "<div class='team_area' id='" + name + "'>"+assignment[0]+"</div>"  ));
+		// The id here will be wrong, we need to assign unique numbers or use the actual ids...which would
+		// mean taking out the hyphens
+		$( "#"+name ).append( renderTeam(assignment[0]));
 	    }
 	}
 	
+	$( "#"+name ).append( $( "<div class='burndown' id='" + name + "'/>"  ) );
+
+	$( "#"+name ).append( $( "<span class='victorypoints' id='vp" + name + "'>DEFEAT</span>" ) );
+
+	$( "#vp"+name ).text("VICTORY POINTS: "+total_scores[i]);
+
 	// Now generate data for this project...
 	// Pass in the project title...
 	draw(data[i],"#" + name,project[1]);
     }
     $("#score").text(""+summation(total_score(game)));
+    // What we really want to do here is to to move the team to a different project in the assignment based
+    // either to move it up or dn
+    $(".moveup").click(moveUp);
+    $(".movedn").click(moveDown);
+
 }
 
 function getRidOfSpace() {
