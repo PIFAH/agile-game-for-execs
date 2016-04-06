@@ -39,7 +39,7 @@
 
 </style>
     <body>
-    <h1><center>Victory Points:<span id="score"></span></center></h1>
+    <h1><center>Sprint #: <span id="sprint"></span>  Victory Points:<span id="score"></span></center></h1>
     <div class="container">
     </div>
     
@@ -373,9 +373,6 @@ function compute_velocity_project_through_turns(game,project,turns) {
     for(var i = 0; i < turns.length; i++) {
 	var turn = turns[i];
 	var v = get_velocity(project,turn);
-	console.log("project = "+project)
-	console.log("turn = "+turn)
-	console.log("v = "+v)
 	sum += v;
     }
     return sum;
@@ -479,7 +476,7 @@ function complete_turn(event,game,alist,teams,turns,turn_num,event) {
     for(var i = 0; i < game.projects.length; i++) {
 	var v = velocities[i][1];
 	console.log("i = " +i+ " v = "+v);
-	data[i][turn_number] = {letter: "Sprint "+turn_number, velocity: v};
+	data[i][turn_number] = {letter: "SPRINT "+turn_number, velocity: v};
     }
 
     redraw(game);
@@ -507,7 +504,7 @@ for(var i = 0; i < NUM_PROJECTS; i++) {
 
 var turn_number = 0;
 
-function draw(data,name,title) {
+function draw(game,data,name,title,project) {
     
     console.log(data);
 
@@ -575,6 +572,31 @@ function draw(data,name,title) {
         .style("font-size", "16px") 
         .style("text-decoration", "underline")  
         .text(title);
+
+    // Now attempting to add lines to represent the goals for this project...
+    console.log("project:");
+    console.log(project);
+    var v = compute_velocity_project_through_turns(game,project[1],game.turns);
+    for(var i = 2; i < project.length; i++) {
+	goal = project[i];
+	console.log(goal);
+	svg.append("text")
+            .attr("x", ((i-2)+0.5)*((width + margin.left + margin.right)/ (project.length - 2)))             
+            .attr("y", -5+y(goal[1]))
+        .attr("text-anchor", "middle")  
+        .style("font-size", "16px") 
+        .style("text-decoration", "underline")  
+		  .text("Goal: "+goal[0]+" vp: "+goal[1]);
+		  
+	svg.append("line")          // attach a line
+	    .style("stroke", (v >= goal[1]) ? "green" : "red")  // colour the line
+	    .attr("x1", 0)     // x position of the first end of the line
+	    .attr("y1", y(goal[1]))      // y position of the first end of the line
+	    .attr("x2",  width + margin.left + margin.right)     // x position of the second end of the line
+	    .attr("y2", y(goal[1]));    // y position of the second end of the line
+
+
+    }
     return svg;
 };
 
@@ -681,6 +703,8 @@ function redraw(game) {
     var projects = get_projects(game);
     var total_scores = total_score(game);
 
+    var num_turns = game.turns.length;
+
     // $( ".container" ).append( $( "<div class='unassigned'/>"  ) );
     // // Now let's inject the teams....
     // for(var i = 0; i < game.teams.length; i++) {
@@ -712,9 +736,10 @@ function redraw(game) {
 
 	// Now generate data for this project...
 	// Pass in the project title...
-	draw(data[i],"#" + name,project[1]);
+	draw(game,data[i],"#" + name,project[1],project);
     }
     $("#score").text(""+summation(total_score(game)));
+    $("#sprint").text(""+num_turns);    
     // What we really want to do here is to to move the team to a different project in the assignment based
     // either to move it up or dn
     $(".moveup").click(moveUp);
