@@ -81,11 +81,11 @@ var global_events = [
      "COBOL-Mandate",
      function f(v) {return v;},
      function f(cost) {return 50+cost;}],
-    ["Zombie Outbreak! Draw no velocity cards this turn!",
-     "Zombie-Outbreak",
-     function f(v) {return 0;},
-     function f(v) {return v;}],
-    ["Flu Outbreak! Half-velocity this turn!",
+    ["Congress forbids using open source, add 20% to all unacheived goals.",
+     "Open-Source-Forbidden",
+     function f(v) {return v;},
+     function f(cost) {return cost * 1.2;}],
+    ["Flu Outbreak! Half-velocity this turn for all teams!",
      "No-News-Is-Good-News",
      function f(v) { return v / 2; },
      function f(v) {return v;}     
@@ -282,13 +282,52 @@ function choose_global_event(global_event) {
     // Apparently this is dangerous, but I don't really want to rewrite everything
     // in a continuation style.... I suppose rendering a button would be a way to do this...
 
-
-    
     return event;
 }
 
-// This needs to be implemented, will probably have 
+// ;; Ugh --- this shouldn't use setf, we need to create a new game here!
+// (defun adjust-goals (goals velocity fun)
+//   (let (value)  ; make sure list starts empty
+//     (dolist (element goals value)
+//       (if (not (<= (cadr element) velocity))
+// 	  (progn
+// 	    (setf (car (cdr element)) (funcall fun (car (cdr element))))
+// 	    )))))
+
+function adjust_goals(project, velocity, fun)
+{
+    console.log("adjusting_goals")
+    console.log("velocity = "+velocity)
+    console.log(project);
+    for(var i = 2; i < project.length; i++) {
+	var g = project[i];
+	console.log("goal : "+g[1]);
+	if ((g[1] > velocity) ) // we don't change things already in the bank.
+	{
+	    console.log("fun : "+fun);
+	    var new_goal = fun(g[1]);
+	    console.log("new goal: "+new_goal);
+	    g[1] = new_goal;
+	}
+    }
+    console.log(project);
+}
+
+
+// (defun adjust-unsecured-project-goals (psym game fun)
+//   "Adjust unsecured project goals for psym"
+//   (let* ((p (get-project-from-sym psym (get-projects game)))
+// 	 (v (compute-velocity-project game psym)))
+// 	  (adjust-goals (cddr p) v fun)
+// 	  )
+//   )
+
 function adjust_unsecured_project_goals(psym,game,fun) {
+    var p = get_project_from_sym(psym,get_projects(game));
+    var v = compute_velocity_project(game,psym);
+    // Note this is quite different from lisp, which uses a pointer model
+    // which we can't use here- we have to pass 
+    adjust_goals(p,v,fun);
 }
 
 function get_project_from_sym(psym,projects) {
@@ -378,15 +417,17 @@ function compute_velocity_project_through_turns(game,project,turns) {
     return sum;
 }
 
+function compute_velocity_project(game,psym) {
+    return compute_velocity_project_through_turns(game,psym,game.turns);
+}
+
 function first_n(lst,n) {
     return lst.slice(0,n);
 }
 
 function compute_velocitys_through_turn(game,i) {
     var turns = first_n(game.turns,i);
-        console.log("i = "+i);
-    console.log("turns = "+turns);
-  return get_projects(game).map(
+    return get_projects(game).map(
          function f(proj) {
              var p = proj[1];
 	     // This is really a cons pair, very annoying in javascript...
@@ -400,8 +441,6 @@ function total_score(game) {
     var turns = game.turns;
     var n = turns.length;
     var velocities = compute_velocitys_through_turn(game,n);
-    console.log("velocities");
-    console.log(velocities);
     var vs = velocities.map(
 	function (element) {
 	    var psym = element[0];
@@ -409,7 +448,6 @@ function total_score(game) {
 	    var project = get_project_from_sym(psym,get_projects(game));
 	    return compute_score(v,project);
 	});
-    console.log(vs);
     return vs;
 }
 
@@ -461,21 +499,33 @@ function complete_turn(event,game,alist,teams,turns,turn_num,event) {
     // double function if I want this work with a dramatic pause.
     var turn = create_turn(alist,event);
     var psyms = get_project_symbols(game);
-    var psym = psyms.randomElement();
-    var fun = event[2];
-    adjust_unsecured_project_goals(psym,game,fun);
+    // Actually, this should happen only on the COBOL Mandate....
+    // On other rules we want to increase all goals by 10%.
+    // AND we need to say on the log which project is selected by the COBOL Mandate.
+    // I need a better way to deal with the "specialness" of this rule...
+    if (event[1] === "COBOL-Mandate") {
+	var psym = psyms.randomElement();
+	var fun = event[3];
+	console.log("Calling adjust_unsecured");
+	console.log(fun);
+	adjust_unsecured_project_goals(psym,game,fun);
+    }
+    if (event[1] === "Open-Source-Forbidden") {
+	psyms.map(function(psym) {
+	    var fun = event[3];
+	    console.log("Calling adjust_unsecured");
+	    console.log(fun);
+	    adjust_unsecured_project_goals(psym,game,fun);
+	});
+    }
     var team_events = exec_team_event_draws(game,turn,teams);
     var new_game = add_turn_and_events(game,turn,team_events);
     new_game.victory_points = total_score(new_game);
 
     var velocities = compute_velocitys_through_turn(game,turn_number+1);
     
-    console.log("turn = "+turn_number);
-    console.log(velocities);
-    
     for(var i = 0; i < game.projects.length; i++) {
 	var v = velocities[i][1];
-	console.log("i = " +i+ " v = "+v);
 	data[i][turn_number] = {letter: "SPRINT "+turn_number, velocity: v};
     }
 
@@ -503,6 +553,16 @@ for(var i = 0; i < NUM_PROJECTS; i++) {
 
 
 var turn_number = 0;
+
+function max_goal(project) {
+  var max = 0;
+  for(var i = 2; i < project.length; i++) {
+	goal = project[i];
+      max = Math.max(max,goal[1]);
+  }
+    return max;
+}
+  
 
 function draw(game,data,name,title,project) {
     
@@ -537,8 +597,11 @@ function draw(game,data,name,title,project) {
     ;
 
     x.domain(data.map(function(d) { return d.letter; }));
-    y.domain([0, d3.max(data, function(d) { return d.velocity; })]);
-    y.domain([0, Math.max(200,d3.max(data, function(d) { return d.velocity; }))]);
+//    y.domain([0, d3.max(data, function(d) { return d.velocity; })]);
+    y.domain([0, Math.max(200,
+			  Math.max(
+			      max_goal(project),
+			      d3.max(data, function(d) { return d.velocity; })))]);
 
 
     svg.append("g")
@@ -574,12 +637,9 @@ function draw(game,data,name,title,project) {
         .text(title);
 
     // Now attempting to add lines to represent the goals for this project...
-    console.log("project:");
-    console.log(project);
     var v = compute_velocity_project_through_turns(game,project[1],game.turns);
     for(var i = 2; i < project.length; i++) {
 	goal = project[i];
-	console.log(goal);
 	svg.append("text")
             .attr("x", ((i-2)+0.5)*((width + margin.left + margin.right)/ (project.length - 2)))             
             .attr("y", -5+y(goal[1]))
@@ -624,11 +684,11 @@ function myFunction() {
     game.assignments = init_assignments;
     redraw(game);
 }
-// Okay, now I have to figure out how to make these actually change the assignment....
-function moveDown() {
+
+function moveUpOrDown(team,move)
+{
     // find the current project position....
     var psym;
-    var team = $(this).attr('id');
     for(var j = 0; j < game.assignments.length; j++) {
 	var assignment = game.assignments[j];
 	if (assignment[0] === team) {
@@ -644,57 +704,44 @@ function moveDown() {
 	}
     }
     var pos = n;
-    
-    // if it won't go outside range, put into new position...
-    if (pos > 0) {
-	// remove the team from the assignments array....
-	for(var i = game.assignments.length - 1; i >= 0; i--) {
-	    if(game.assignments[i][0] === team) {
-		game.assignments.splice(i, 1);
-	    }
-	}
-	// the put it back against the next project.
-	game.assignments.push([team,projects[pos-1][1]]);
-    }
+    move(pos,game,team,projects);
     redraw(game);
+}
+function del_assignment(team,game,pos) {
+    // remove the team from the assignments array....
+    for(var i = game.assignments.length - 1; i >= 0; i--) {
+	if(game.assignments[i][0] === team) {
+	    game.assignments.splice(i, 1);
+	}
+    }
+}
+function moveDown() {
+    var team = $(this).attr('id');
+    moveUpOrDown(team,
+		 function (pos,game,team,projects) {
+		     // if it won't go outside range, put into new position...
+		     if (pos > 0) {
+			 del_assignment(team,game,pos);
+			 game.assignments.push([team,projects[pos-1][1]]);
+		     }
+		 });
 }
 
 function moveUp() {
-    // find the current project position....
-    var psym;
     var team = $(this).attr('id');
-    for(var j = 0; j < game.assignments.length; j++) {
-	var assignment = game.assignments[j];
-	if (assignment[0] === team) {
-	    psym = assignment[1];
-	} 
-    }
-    var projects = get_projects(game);
-    var n = -1;
-    for(var i = 0; i < projects.length; i++) {
-	var p = projects[i];
-	if (psym === p[1]) {
-	    n = i;
-	}
-    }
-    var pos = n;
-    
-    // if it won't go outside range, put into new position...
-    if (pos < (projects.length - 1)) {
-	// remove the team from the assignments array....
-	for(var i = game.assignments.length - 1; i >= 0; i--) {
-	    if(game.assignments[i][0] === team) {
-		game.assignments.splice(i, 1);
-	    }
-	}
-	// the put it back against the next project.
-	game.assignments.push([team,projects[pos+1][1]]);
-    }
-    redraw(game);
-}
+    moveUpOrDown(team,
+		 function (pos,game,team,projects) {
+		     // if it won't go outside range, put into new position...
+		     if (pos < (projects.length - 1)) {
+			 del_assignment(team,game,pos);
+			 game.assignments.push([team,projects[pos+1][1]]);
+		     }
+		 });
+}xs
+		
 
 function renderTeam(team_id) {
-    return $( "<div><button class='moveup' id='"+team_id+"'>Move Up</button><button class='movedn' id='"+team_id+"'>Move Down</button><p>"+ team_id+ "</p></div>");    
+    return $( "<div><button class='moveup' id='"+team_id+"'>Move Up</button><button class='movedn' id='"+team_id+"'>Move Down</button><span>"+ team_id+ "</span></div>");    
 }
 
 function redraw(game) {
@@ -705,12 +752,6 @@ function redraw(game) {
 
     var num_turns = game.turns.length;
 
-    // $( ".container" ).append( $( "<div class='unassigned'/>"  ) );
-    // // Now let's inject the teams....
-    // for(var i = 0; i < game.teams.length; i++) {
-    // 	var team = game.teams[i];
-    // 	$(".unassigned").append( renderTeam(team,i));
-    // }
     for(var i = 0; i < projects.length; i++) {
 
 	var project = projects[i];
