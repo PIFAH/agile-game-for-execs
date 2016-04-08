@@ -276,22 +276,29 @@ function create_turn(alist,global_events) {
 		    team_cards: [] }};
 }
 
-function exec_team_event_draws(game,turn,teams) {
+function exec_team_event_draws(event,game,alist,teams,turn,turn_num,team_events,n,results) {
     var vel_func = turn.turn.global_cards[2];
-    var results = [];
-    for(var i = 0; i < teams.length; i++) {
-	var team = teams[i];
-	var draw_func = team[2];
-	var draws = draw_func(game,turn);
-	var draws_x = draws.map(vel_func);
-	var velocity = [team[1],draws_x];
-	console.log("Compute Velocity for Team:");
-	console.log(team[1]);
-	console.log("Wish them well....");
-	console.log(velocity);
-	console.log("...total story points");
-	results[i] = velocity;
-    }
+    //    var results = [];
+    //    for(var i = 0; i < teams.length; i++) {
+    i = n;
+    var team = teams[i];
+    var draw_func = team[2];
+    var draws = draw_func(game,turn);
+    var draws_x = draws.map(vel_func);
+    var velocity = [team[1],draws_x];
+    $( "#projectrows" ).append( $("<h4>Team: "+ team[1]+"</h4>"));
+    $( "#projectrows" ).append($( "<h4> "+summation(velocity[1])+" ...total story points!</h4>"));
+    results[i] = velocity;
+    setTimeout(function f() {
+	if ((n+1) >= teams.length) {
+	    setTimeout(function g() {
+		finalize_turn(event,game,alist,teams,turn,turn_num,results);
+	    },5000);
+	} else {
+	    exec_team_event_draws(event,game,alist,teams,turn,turn_num,team_events,n+1,results);
+	}
+    }, 1000);
+
     return results;
 }
 
@@ -310,31 +317,15 @@ function choose_global_event(global_event) {
 
 function adjust_goals(project, velocity, fun)
 {
-    console.log("adjusting_goals")
-    console.log("velocity = "+velocity)
-    console.log(project);
     for(var i = 2; i < project.length; i++) {
 	var g = project[i];
-	console.log("goal : "+g[1]);
 	if ((g[1] > velocity) ) // we don't change things already in the bank.
 	{
-	    console.log("fun : "+fun);
-	    var new_goal = fun(g[1]);
-	    console.log("new goal: "+new_goal);
+	    var new_goal = Math.round(fun(g[1]));
 	    g[1] = new_goal;
 	}
     }
-    console.log(project);
 }
-
-
-// (defun adjust-unsecured-project-goals (psym game fun)
-//   "Adjust unsecured project goals for psym"
-//   (let* ((p (get-project-from-sym psym (get-projects game)))
-// 	 (v (compute-velocity-project game psym)))
-// 	  (adjust-goals (cddr p) v fun)
-// 	  )
-//   )
 
 function adjust_unsecured_project_goals(psym,game,fun) {
     var p = get_project_from_sym(psym,get_projects(game));
@@ -354,7 +345,6 @@ function get_project_from_sym(psym,projects) {
     return null;
 }
 
-// TODO: This is fuboar
 function compute_score(velocity,project) {
     var sum = 0;
     for(var i = 0; i < project.length-2; i++) {
@@ -503,9 +493,8 @@ function make_turn(game,alist) {
 function intermediate(event,game,alist,teams,turns,turn_num,event) {
     $( "#projectrows" ).append( $( "<h1 style='{color: red; }'> "+event[0]+"</h1>"  ) );
     setTimeout(function f() {
-	getRidOfSpace();
 	complete_turn(event,game,alist,teams,turns,turn_num,event);
-    },3000);
+    },2000);
 }
 
 function complete_turn(event,game,alist,teams,turns,turn_num,event) {
@@ -520,20 +509,21 @@ function complete_turn(event,game,alist,teams,turns,turn_num,event) {
     if (event[1] === "COBOL-Mandate") {
 	var psym = psyms.randomElement();
 	var fun = event[3];
-	console.log("Calling adjust_unsecured");
-	console.log(fun);
 	adjust_unsecured_project_goals(psym,game,fun);
     }
     if (event[1] === "Open-Source-Forbidden") {
 	psyms.map(function(psym) {
 	    var fun = event[3];
-	    console.log("Calling adjust_unsecured");
-	    console.log(fun);
 	    adjust_unsecured_project_goals(psym,game,fun);
 	});
     }
-    var team_events = exec_team_event_draws(game,turn,teams);
+    var results = [];
+    var team_events = exec_team_event_draws(event,game,alist,teams,turn,turn_num,team_events,0,results);
+//    finalize_turn(event,game,alist,teams,turn,turn_num,team_events);
+}
+function finalize_turn (event,game,alist,teams,turn,turn_num,team_events) {
     var new_game = add_turn_and_events(game,turn,team_events);
+
     new_game.victory_points = total_score(new_game);
 
     var velocities = compute_velocitys_through_turn(game,turn_number+1);
