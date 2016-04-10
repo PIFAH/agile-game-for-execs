@@ -57,9 +57,17 @@
   <div class="page-header">
     <h1><center>Sprint #: <span id="sprint"></span>  Total Victory Points: <span id="score"></span></center></h1>
       </div>
-
-    <button onclick="myFunction()">Start Game</button>
+<div class="row">
+    <div class="col-md-4">
+    <button onclick="startNewGame()">Start Game</button>
+    </div>
+    <div class="col-md-8">
     <button onclick="executeTurn()">Execute Turn</button>
+    </div>
+
+</div>
+<div class="row" id="messagebanner">
+</div>
 
       <div class="row" id="projectrows">
       </div>
@@ -109,8 +117,13 @@ var global_events = [
      function f(v) {return v;},
      function f(cost) {return cost * 1.2;}],
     ["Flu Outbreak! Half-velocity this turn for all teams!",
-     "No-News-Is-Good-News",
+     "Flu-Outbreak-Half-Velocity",
      function f(v) { return v / 2; },
+     function f(v) {return v;}     
+    ],
+    ["Vacation Season. Quarter-velocity this turn for all teams!",
+     "Vacation-Season-Quarter-Velocity",
+     function f(v) { return v / 4; },
      function f(v) {return v;}     
     ],
     ["No news is good news.",
@@ -120,6 +133,26 @@ var global_events = [
     ]
 ];
 
+
+// When you get to Sprint 6, add to leaderboard, render leaderboard
+// 
+var leaderboard = [];
+
+var titles = [ { score: 100,
+		 title: "You're fired." },
+	       { score: 140,
+		 title: "We want to keep you from hurting yourself in the future." },
+	       { score: 160,
+		 title: "We want to keep you from hurting yourself in the future." },
+	       { score: 200,
+		 title: "We are deeply disappointed." },
+	       { score: 300,
+		 title: "We think you have potential." },
+	       { score: 400,
+		 title: "We think you need more responsibility. Good job." },
+	       { score: 500,
+		 title: "We weren't sure this was possible! Great job!" }];
+	      	       
 
 /* https://gist.github.com/kerimdzhanov/7529623 */
 /**
@@ -195,29 +228,29 @@ var team_resources  = [
 ];
 
 var projects = [
+    ["Case Management System.",
+     "Case-Managment-Project",
+     ["MVP",50,50],
+     ["Limited",150,100],
+     ["Full",200,50]
+    ],
+    ["Contractual Mandate",
+     "Contractual-Mandate-Project",
+     ["Full",150,150]     
+    ],
+    ["Legacy Rewrite. Each Step has better ROI.",
+     "Rejuvenation-Project",
+     ["A", 80, 20],
+     ["B", 100, 30],
+     ["C", 120, 40],
+     ["D", 140, 50],
+     ["E", 150, 60]
+    ],
     ["Faster-than-light drive.",
      "FTL-Project",
      ["A",30,30],
      ["B",100,100],
      ["C",200,200]
-    ],
-    ["Pocket Fusion Generator.",
-     "Pocket-Fusion-Project",
-     ["A",75,75],
-     ["B",150,150]
-    ],
-    ["Rejuventation Treatement. All progress is secured at end of turn.",
-     "Rejuvenation-Project",
-     ["A", 10, 10],
-     ["B", 20, 10],
-     ["C", 30, 10],
-     ["D", 40, 10],
-     ["E", 50, 10],
-     ["F", 60, 10],		 
-     ["G", 70, 10],
-     ["H", 80, 10],
-     ["I", 90, 10],
-     ["J", 100, 10]
     ],
     ["Giga-watt-hour super capacitor",
      "Super-Capacitor-Project",
@@ -286,18 +319,18 @@ function exec_team_event_draws(event,game,alist,teams,turn,turn_num,team_events,
     var draws = draw_func(game,turn);
     var draws_x = draws.map(vel_func);
     var velocity = [team[1],draws_x];
-    $( "#projectrows" ).append( $("<h4>Team: "+ team[1]+"</h4>"));
+    $( "#projectrows" ).append( $("<h4>"+ team[1]+":</h4>"));
     $( "#projectrows" ).append($( "<h4> "+summation(velocity[1])+" ...total story points!</h4>"));
     results[i] = velocity;
     setTimeout(function f() {
 	if ((n+1) >= teams.length) {
 	    setTimeout(function g() {
 		finalize_turn(event,game,alist,teams,turn,turn_num,results);
-	    },5000);
+	    },500);
 	} else {
 	    exec_team_event_draws(event,game,alist,teams,turn,turn_num,team_events,n+1,results);
 	}
-    }, 1000);
+    }, 800);
 
     return results;
 }
@@ -455,13 +488,12 @@ function total_score(game) {
     return vs;
 }
 
-function add_turn_and_events(game,turn,events) {
-    var global_cards = turn.global_cards;
+function add_turn_and_events(game,turn,global,events) {
     var team_cards = turn.team_cards;
     var assignments = turn.turn.assignments;
     var turns = game.turns;
     turns.unshift({turn: {assignments: assignments,
-			  global_cards: global_cards,
+			  global_cards: global,
 			  team_cards: events}});
     var new_game = cons_game(
 	game.projects,
@@ -487,14 +519,14 @@ function make_turn(game,alist) {
     var event = choose_global_event(global_events);
     setTimeout(function f() {
 	intermediate(event,game,alist,teams,turns,turn_num,event);
-    },2000);
+    },1000);
 }
 
 function intermediate(event,game,alist,teams,turns,turn_num,event) {
     $( "#projectrows" ).append( $( "<h1 style='{color: red; }'> "+event[0]+"</h1>"  ) );
     setTimeout(function f() {
 	complete_turn(event,game,alist,teams,turns,turn_num,event);
-    },2000);
+    },1000);
 }
 
 function complete_turn(event,game,alist,teams,turns,turn_num,event) {
@@ -522,7 +554,7 @@ function complete_turn(event,game,alist,teams,turns,turn_num,event) {
 //    finalize_turn(event,game,alist,teams,turn,turn_num,team_events);
 }
 function finalize_turn (event,game,alist,teams,turn,turn_num,team_events) {
-    var new_game = add_turn_and_events(game,turn,team_events);
+    var new_game = add_turn_and_events(game,turn,event,team_events);
 
     new_game.victory_points = total_score(new_game);
 
@@ -537,12 +569,19 @@ function finalize_turn (event,game,alist,teams,turn,turn_num,team_events) {
 
     turn_number++;    
 
+    if (game.turns.length >= MAX_NUM_TURNS) {
+	alert("Game Over!");
+	var title = get_label(total_score(game),titles);
+	$("#messagebanner").append("    <div class='col-md-12'><center><h1 style='{color: red;}'>Game Over: "+title.title + "</h1></center></div>");
+    }
+    leaderboard.push(title);
+    
     return new_game;
 }
 
 
 
-var MAX_NUM_TURNS = 6;
+var MAX_NUM_TURNS = 2;
 
 
 var data = new Array(NUM_PROJECTS);
@@ -675,7 +714,9 @@ var game = null;
 var assignment = [];
 
 // If the game already exists, this should really do a restart....
-function myFunction() {
+function startNewGame() {
+    
+    getRidOfSpace();   
     game = start_game();
 
     // let's create some randome assignments...
@@ -766,6 +807,73 @@ function renderTeam(team_id) {
     return $( "<div class='teamrep'><button>"+ team_id+ "</button><button class='movedn' id='"+team_id+"'>Move Down</button><button class='moveup' id='"+team_id+"'>Move Up</button></div>");    
 }
 
+function get_global_events_html(events) {
+    var result = "";
+    result += "<h4>Gobal Event: ";
+    result += events[1];
+    result += "</h4>";
+    return result;
+}
+function render_assignment_html(alist) {
+    var result = "";
+    result += "<table class='table table-bordered'>";
+    result += "<caption>Assignments</caption> <thead> <tr> <th>Team</th> <th>Project</th> </tr> </thead>";
+    result += "<tbody class='table-striped'>";
+    for(var j = 0; j < alist.length; j++) {
+	var assoc = alist[j];
+	result += "<tr>";
+	result += "<td>"+assoc[0]+" </td><td> "+assoc[1] +"</td>";
+	result += "</tr>";
+    }
+    result += "</tbody>";    
+    result += "</table>";
+    return result;
+}
+function find_project(alist,team) {
+    for(var j = 0; j < alist.length; j++) {
+	var assoc = alist[j];
+	if (assoc[0] === team) return assoc[1];
+    }
+}
+
+
+function render_team_events_html(game,turn,events) {
+    var result = "";
+    result += "<table class='table table-bordered table-striped'>";
+    result += "<caption>Velocities</caption> <thead> <tr> <th>Team</th> <th>Velocity</th> <th>Project</th> </tr> </thead>";
+    result += "<tbody class='table-striped'>";
+    var psyms = get_project_symbols(game);
+    for(var j = 0; j < events.length; j++) {
+	var assoc = events[j];
+	result += "<tr>";
+	result += "<td>"+assoc[0]+" </td><td> "+assoc[1] +"</td><td> " + find_project(turn.turn.assignments,assoc[0]) + "</td>";
+	result += "</tr>";
+    }
+    result += "</tbody>";    
+    result += "</table>";
+    return result;
+}
+function get_history_report(turn) {
+//    var assignment_html = render_assignment_html(turn.turn.assignments);
+    var global_event_html = get_global_events_html(turn.turn.global_cards);
+    var team_event_html = render_team_events_html(game,turn,turn.turn.team_cards);
+    //    return [assignment_html,global_event_html,team_event_html];
+    return [global_event_html,team_event_html];
+}
+
+function get_game_history(game) {
+    var turns = game.turns;
+    var history = ""; 
+    for(var i = 0; i < turns.length; i++) {
+	var num = turns.length - 1 - i;
+	var turn = turns[num];
+	var history_turn = get_history_report(turn).join("");
+	history += "<h3> Turn : "+(num+1)+ "</h3>";
+	history += history_turn;
+    }
+    return history;
+}
+
 function redraw(game) {
     getRidOfSpace();
     // We need to create the divs that we will load
@@ -804,6 +912,14 @@ function redraw(game) {
 	$( "#"+name ).append( $( "<div class='col-md-8' id='chart" + name + "'></div>" ) );
 	draw(game,data[i],"#chart" + name,project[1],project);
     }
+
+    $( "#projectrows" ).append( $( "<div class='row'><center><h3>Game History</h3></center></div"));
+
+    var history = get_game_history(game);
+
+   $( "#projectrows" ).append(history);
+
+    
     $("#score").text(""+summation(total_score(game)));
     $("#sprint").text(""+num_turns);    
     // What we really want to do here is to to move the team to a different project in the assignment based
@@ -817,6 +933,19 @@ function getRidOfSpace() {
     $( "#projectrows" ).empty();
 }
 
+function get_label(score,titles) {
+    var cur = 0;
+    var cur_title = titles[0];
+    for(var i = 0; i < titles.length; i++) {
+	var title = titles[i];
+	if (score >= title.score) {
+	    cur++;
+	    cur_title = title;
+	}
+    }
+    return cur_title;
+}
+
 function executeTurn() {
     // This is a crummy version of executing a turn, we'll just add
     // a some data...
@@ -826,7 +955,6 @@ function executeTurn() {
     // will deal with that later
     make_turn(game,game.assignments);
 
-    
 }
 
 </script>
