@@ -571,10 +571,12 @@ function finalize_turn (event,game,alist,teams,turn,turn_num,team_events) {
 
     if (game.turns.length >= MAX_NUM_TURNS) {
 	alert("Game Over!");
-	var title = get_label(total_score(game),titles);
+	var title = get_title(summation(total_score(game)),titles);
 	$("#messagebanner").append("    <div class='col-md-12'><center><h1 style='{color: red;}'>Game Over: "+title.title + "</h1></center></div>");
+	leaderboard.push(title);
+	$("#messagebanner").append(render_leader_board());
     }
-    leaderboard.push(title);
+
     
     return new_game;
 }
@@ -585,17 +587,21 @@ var MAX_NUM_TURNS = 2;
 
 
 var data = new Array(NUM_PROJECTS);
+var turn_number = 0;
 
-
-for(var i = 0; i < NUM_PROJECTS; i++) {
-    data[i] = new Array(MAX_NUM_TURNS);
-    for(var j = 0; j < MAX_NUM_TURNS; j++) {
-	data[i][j] = {letter: "Sprint "+j, velocity: 0.0 };
+function init_data() {
+    turn_number = 0;
+    data = new Array(NUM_PROJECTS);
+    for(var i = 0; i < NUM_PROJECTS; i++) {
+	data[i] = new Array(MAX_NUM_TURNS);
+	for(var j = 0; j < MAX_NUM_TURNS; j++) {
+	    data[i][j] = {letter: "Sprint "+j, velocity: 0.0 };
+	}
     }
 }
 
+init_data();
 
-var turn_number = 0;
 
 function max_goal(project) {
   var max = 0;
@@ -715,7 +721,7 @@ var assignment = [];
 
 // If the game already exists, this should really do a restart....
 function startNewGame() {
-    
+    init_data();
     getRidOfSpace();   
     game = start_game();
 
@@ -853,6 +859,24 @@ function render_team_events_html(game,turn,events) {
     result += "</table>";
     return result;
 }
+
+
+function render_leader_board(game) {
+    var result = "";
+    result += "<table class='table table-bordered table-striped'>";
+    result += "<caption>Leaderboard</caption> <thead> <tr> <th>Game</th> <th>Score</th> <th>Result</th> </tr> </thead>";
+    result += "<tbody class='table-striped'>";
+    for(var j = 0; j < leaderboard.length; j++) {
+	var title = leaderboard[j];
+	result += "<tr>";
+	result += "<td>"+j+" </td><td> "+title.score +"</td><td> " + title.title + "</td>";
+	result += "</tr>";
+    }
+    result += "</tbody>";    
+    result += "</table>";
+    return result;
+}
+
 function get_history_report(turn) {
 //    var assignment_html = render_assignment_html(turn.turn.assignments);
     var global_event_html = get_global_events_html(turn.turn.global_cards);
@@ -931,16 +955,19 @@ function redraw(game) {
 
 function getRidOfSpace() {
     $( "#projectrows" ).empty();
+    $("#messagebanner").empty();
 }
 
-function get_label(score,titles) {
+function get_title(score,titles) {
     var cur = 0;
-    var cur_title = titles[0];
+    var cur_title = {title: titles[0].title, score: score};
     for(var i = 0; i < titles.length; i++) {
 	var title = titles[i];
 	if (score >= title.score) {
 	    cur++;
-	    cur_title = title;
+	    cur_title = {title: title.title, score: score};
+	} else {
+	    return cur_title;
 	}
     }
     return cur_title;
