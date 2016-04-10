@@ -562,7 +562,10 @@ function complete_turn(event,game,alist,teams,turns,turn_num,event) {
     var results = [];
     var team_events = exec_team_event_draws(event,game,alist,teams,turn,turn_num,team_events,0,results);
 //    finalize_turn(event,game,alist,teams,turn,turn_num,team_events);
-}
+		       }
+
+
+var MAX_NUM_TURNS = 6;		       
 function finalize_turn (event,game,alist,teams,turn,turn_num,team_events) {
     var new_game = add_turn_and_events(game,turn,event,team_events);
 
@@ -593,7 +596,7 @@ function finalize_turn (event,game,alist,teams,turn,turn_num,team_events) {
 
 
 
-var MAX_NUM_TURNS = 2;
+
 
 
 var data = new Array(NUM_PROJECTS);
