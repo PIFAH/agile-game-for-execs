@@ -136,9 +136,24 @@ var global_events = [
      function f(v) { return v / 4; },
      function f(v) {return v;}     
     ],
-    ["No news is good news.",
-     "No-News-Is-Good-News",
-     function (v) { return v; },
+    ["Org-wide event manadated. Subtract one point from each team velocity.",
+     "Org-wide-event",
+     function (v) { return Math.max(v-1,0); },
+     function (v) { return v; }
+    ],
+    ["Natural disaster! All teams take 10% penalty.",
+     "No-Disaster",
+     function (v) { return v*0.9; },
+     function (v) { return v; }
+    ],
+    ["3 paycheck month. All teams get one extra velocity point.",
+     "Three-paycheck-month",
+     function (v) { return v+1; },
+     function (v) { return v; }
+    ],
+    ["Zombie apocalypse! All team velocity reduced to zero.",
+     "Zombie-apocalypse",
+     function (v) { return 0; },
      function (v) { return v; }
     ],
     ["No news is good news.",
@@ -249,6 +264,43 @@ var team_resources  = [
     ]
 ];
 
+var capability_resources  = [
+    ["User Expeperience Expert. Each turn, has 50% chance of splitting largest goal.",
+     "UX Expert",
+     "cap",     
+     function f(game,turn,velocities,project,teams) {
+	 return velocities;
+     },
+    ],
+    ["DevOps Expert. Each team on project gets a 10% bonus.",
+     "DevOps Expert",
+     "cap",
+     function f(game,turn,velocities,project,teams) {
+	 console.log(velocities);
+	 var nvels = velocities[1].map(x => $.isNumeric(x) ? (x*1.1) : x);
+	 return [velocities[0],nvels];
+     },
+
+    ],
+    ["Agile Coach. No team will produce less than 10 story points.",
+     "Agile Coach",
+     "cap",          
+     function f(game,turn,velocities,project,teams) {
+	 console.log(velocities);
+	 var nvels = velocities[1].map(x => $.isNumeric(x) ? Math.max(x,10) : x);
+	 return [velocities[0],nvels];
+     },
+
+    ],
+    ["Superb Product Owner. 50% chance of decreasing story point requiremenst by 30%/",
+     "Product Owner.",
+     "cap",     
+     function f(game,turn,velocities,project,teams) {
+	 return velocities;
+     },
+    ],
+];
+
 var projects = [
     ["Case Management System (with MVP).",
      "Case-Managment-Project",
@@ -321,22 +373,26 @@ function choose_n_without_replacement(a,n) {
     return result;
 }
 
-function cons_game(projects,teams,event,turns) {
+function cons_game(projects,teams,capabilities,event,turns) {
     return { projects: projects.slice(),
 	     global_cards: global_events,
 	     global_series: choose_n_without_replacement(global_events.slice(0),MAX_NUM_TURNS),
 	     teams: teams,
+	     caps: capabilities,
 	     turns: turns};
 }
 var NUM_PROJECTS = 3;
 var NUM_TEAMS = 5;
+var NUM_CAPABILITIES = 2;
 
 function start_game() {
     // A game consists of projects, turns, resource assignments, etc.
     var nprojects = projects.slice();
     var nteam_resources = team_resources.slice();
+    var cap_resources = capability_resources.slice();
     return cons_game(choose_n_without_replacement(projects,NUM_PROJECTS),
 		     choose_n_without_replacement(team_resources,NUM_TEAMS),
+		     choose_n_without_replacement(cap_resources,NUM_CAPABILITIES),
 		     [],
 		     []);
 }
@@ -347,26 +403,61 @@ function create_turn(alist,global_events) {
 		    team_cards: [] }};
 }
 
-function exec_team_event_draws(event,game,alist,teams,turn,turn_num,team_events,n,results) {
+function get_project_team_is_assigned_to(team,alist) {
+    var assignments = alist.filter(function (item) { return item[0] == team[1];});
+    var assignment = assignments[0];
+    return assignment[1];
+}
+
+function all_capabilites_assigned_to_project(psym,alist) {
+    var cap_ids = alist.filter(function (item)
+			       { return (item[1] == psym) &&
+				 (capability_resources.filter(
+				     function(cap) {
+					 return cap[1] == item[0];
+				     })).length > 0;
+				 }
+			      );
+    return cap_ids;
+}
+
+function exec_team_event_draws(event,game,alist,teams,caps,turn,turn_num,team_events,n,results) {
     var vel_func = turn.turn.global_cards[2];
-    //    var results = [];
-    //    for(var i = 0; i < teams.length; i++) {
+
     i = n;
     var team = teams[i];
     var draw_func = team[2];
     var draws = draw_func(game,turn);
     var draws_x = draws.map(vel_func);
     var velocity = [team[1],draws_x];
+    // Here is our opportunity to adjust velocity based on metat rules....
+    // Since we are drawing on the basis of individual teams,
+    // we really need to know which project this team is attached to so that we
+    // can compute all capabilities attached to that team...
+
+    var psym = get_project_team_is_assigned_to(team,alist);
+    
+    var pcaps = all_capabilites_assigned_to_project(psym,alist);
+    for(var j = 0; j < pcaps.length; j++) {
+	var cap_id = pcaps[j][0];
+	var capability = capability_resources.filter(x => x[1] == cap_id)[0];
+	// if we have capabilities, we are almost ready to apply the generalized functions...
+	console.log("psym, cap" + psym + " , " + capability);
+	var f = capability[3];
+
+	velocity = f(game,turn,velocity,psym,team);
+    }
+
     $( "#projectrows" ).append( $("<h4>"+ team[1]+":</h4>"));
     $( "#projectrows" ).append($( "<h4> "+summation(velocity[1])+" ...total story points!</h4>"));
     results[i] = velocity;
     setTimeout(function f() {
 	if ((n+1) >= teams.length) {
 	    setTimeout(function g() {
-		finalize_turn(event,game,alist,teams,turn,turn_num,results);
+		finalize_turn(event,game,alist,teams,caps,turn,turn_num,results);
 	    },500);
 	} else {
-	    exec_team_event_draws(event,game,alist,teams,turn,turn_num,team_events,n+1,results);
+	    exec_team_event_draws(event,game,alist,teams,caps,turn,turn_num,team_events,n+1,results);
 	}
     }, 800);
 
@@ -540,6 +631,7 @@ function add_turn_and_events(game,turn,global,events) {
     var new_game = cons_game(
 	game.projects,
 	game.teams,
+	game.caps,
 	[],
 	game.turns);
     return new_game;
@@ -556,6 +648,7 @@ function get_project_symbols(game) {
 
 function make_turn(game,alist) {
     var teams = game.teams;
+    var caps = game.caps;
     var turns = game.turns;
     var turn_num = 1 + turns.length;
     var event = game.global_series[turns.length];
@@ -563,18 +656,18 @@ function make_turn(game,alist) {
 	event = global_events.random_element();
     }
     setTimeout(function f() {
-	intermediate(event,game,alist,teams,turns,turn_num,event);
+	intermediate(event,game,alist,teams,caps,turns,turn_num,event);
     },1000);
 }
 
-function intermediate(event,game,alist,teams,turns,turn_num,event) {
+function intermediate(event,game,alist,teams,caps,turns,turn_num,event) {
     $( "#projectrows" ).append( $( "<h1 style='{color: red; }'> "+event[0]+"</h1>"  ) );
     setTimeout(function f() {
-	complete_turn(event,game,alist,teams,turns,turn_num,event);
+	complete_turn(event,game,alist,teams,caps,turns,turn_num,event);
     },1000);
 }
 
-function complete_turn(event,game,alist,teams,turns,turn_num,event) {
+function complete_turn(event,game,alist,teams,caps,turns,turn_num,event) {
     // TODO: It seems that here I would have to break this into a a continuation-style
     // double function if I want this work with a dramatic pause.
     var turn = create_turn(alist,event);
@@ -595,13 +688,12 @@ function complete_turn(event,game,alist,teams,turns,turn_num,event) {
 	});
     }
     var results = [];
-    var team_events = exec_team_event_draws(event,game,alist,teams,turn,turn_num,team_events,0,results);
-//    finalize_turn(event,game,alist,teams,turn,turn_num,team_events);
-		       }
+    var team_events = exec_team_event_draws(event,game,alist,teams,caps,turn,turn_num,team_events,0,results);
+}
 
 
 var MAX_NUM_TURNS = 6;		       
-function finalize_turn (event,game,alist,teams,turn,turn_num,team_events) {
+function finalize_turn (event,game,alist,teams,caps,turn,turn_num,team_events) {
     var new_game = add_turn_and_events(game,turn,event,team_events);
 
     new_game.victory_points = total_score(new_game);
@@ -628,11 +720,6 @@ function finalize_turn (event,game,alist,teams,turn,turn_num,team_events) {
     
     return new_game;
 }
-
-
-
-
-
 
 var data = new Array(NUM_PROJECTS);
 var turn_number = 0;
@@ -782,6 +869,12 @@ function startNewGame() {
 	var project = game.projects.randomElement()[1];
 	init_assignments.push([team[1],project]);
     }
+    var caps = game.caps;
+    for(var i = 0; i < caps.length; i++) {
+	var cap = caps[i];
+	var project = game.projects.randomElement()[1];
+	init_assignments.push([cap[1],project]);
+    }
     game.assignments = init_assignments;
     redraw(game);
 }
@@ -845,7 +938,17 @@ function moveUp() {
 
 function renderTeam(team_id) {
     var team = team_resources.filter(function (item) { return item[1] == team_id;});
-    var team_text = team[0][0];
+    var team_text;    
+    if (team.length) {
+	team_text = team[0][0];
+    } else  {
+	var cap = capability_resources.filter(function (item) { return item[1] == team_id;});
+	if (cap.length) {
+	    team_text = cap[0][0];
+	} else {
+	    console.log("bad team_id:"+team_id);
+	}
+    }
     var justified_button_group = 
     '<div class="btn-group" role="group" data-toggle="tooltip" title="' + team_text + '">\
   <div class="btn-group" role="group">\
