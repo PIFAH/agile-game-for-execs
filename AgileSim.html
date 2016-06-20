@@ -224,24 +224,28 @@ var team_resources  = [
      function f(game,turn) {
 	return [draw_velocity(),draw_velocity()]
      },
+     "Average Team",     
     ],
     ["Elite Team. Teams vary in their skil.  An Elite, cohesive team can be far more effective than other team. Draw 3 velocity cards each sprint.",
      "Elite_Team",
      function f(game,turn) {
 	 return [draw_velocity(),draw_velocity(),draw_velocity()]
      },
+     "Elite Team",
     ],
     ["Test-Driven-Team. Test Driven Development creates steady progress toward any goal. Draw 2 Velocity Cards, no card is ever less than 10.",
      "Test_Driven_Team",
      function f(game,turn) {
 	 return [Math.max(10,draw_velocity()),Math.max(10,draw_velocity())];
      },
+     "Test-Driven Team",
     ],
     ["User-focused Team. User focused team consistently produce valuable progress.  Draw one velocity card and add  5.",
      "User_Focused_Team",
      function f(game,turn) {
 	return [draw_velocity()+5]
      },
+     "User-Focused Team",     
     ],
     ["Blame Culture Team. Blame culture teams exhibit poor cooperation and user responsiveness. Draw one velocity card and subtract 5.",
      "Blame_Culture_Team",
@@ -249,18 +253,21 @@ var team_resources  = [
 	      return [Math.max(draw_velocity() - 5,0)];
 	  }
      ,
+     "Blame Culture Team",          
     ],
     ["Insecure Team. Insecure teams have a hard time properly taking user needs into acocunt.  Draw one velocity card, and substract 5, but never go below zero.",
      "Insecure_Team",
      function f(game,turn) {
 	 return [Math.max(draw_velocity() - 5,0)];
      },
+     "Insecure Team",               
     ],
     ["Erratic Team. Erratic teams use Agile poorly and do not produce smooth consistent velocity and are hard to manage. Draw one velocity card, and multiply by 2",
      "Erratic_Team",
      function f(game,turn) {
 	 return [draw_velocity()*2];
      },
+     "Erratic Team",                    
     ]
 ];
 
@@ -292,6 +299,7 @@ var capability_resources  = [
 	 }
 	 return velocities;
      },
+     "UX Expert",
     ],
     ["DevOps Expert. Each team on project gets a 10% bonus.",
      "DevOps_Expert",
@@ -301,6 +309,7 @@ var capability_resources  = [
 	 var nvels = velocities[1].map(x => $.isNumeric(x) ? (x*1.1) : x);
 	 return [velocities[0],nvels];
      },
+     "DevOps Expert",     
     ],
     ["Agile Coach. No team will produce less than 10 story points.",
      "Agile_Coach",
@@ -310,6 +319,7 @@ var capability_resources  = [
 	 var nvels = velocities[1].map(x => $.isNumeric(x) ? Math.max(x,10) : x);
 	 return [velocities[0],nvels];
      },
+     "Agile Coach",          
     ],
     ["Superb Product Owner. 50% chance of decreasing story point requiremenst by 30%/",
      "Product_Owner.",
@@ -325,6 +335,7 @@ var capability_resources  = [
 	 }
 	 return velocities;
      },
+     "oProduct Owner",               
     ],
 ];
 
@@ -964,13 +975,16 @@ function moveUp() {
 
 function renderTeam(team_id) {
     var team = team_resources.filter(function (item) { return item[1] == team_id;});
-    var team_text;    
+    var team_text;
+    var label;
     if (team.length) {
 	team_text = team[0][0];
+	label = team[0][3];
     } else  {
 	var cap = capability_resources.filter(function (item) { return item[1] == team_id;});
 	if (cap.length) {
 	    team_text = cap[0][0];
+	    label = cap[0][4];
 	} else {
 	    console.log("bad team_id:"+team_id);
 	}
@@ -985,7 +999,7 @@ function renderTeam(team_id) {
   </div>\
   <div class="btn-group" role="group"> \
 <button type="button" class="btn btn-default">';
-    var remainder = team_id+'</button> \
+    var remainder = label+'</button> \
   </div> \
 </div>';
 
