@@ -265,37 +265,64 @@ var team_resources  = [
 ];
 
 var capability_resources  = [
-    ["User Expeperience Expert. Each turn, has 50% chance of splitting largest goal.",
-     "UX Expert",
+    ["User Expeperience Expert. Each turn, has 33% chance of splitting one goal from associated project, chosen at random.",
+     "UX_Expert",
      "cap",     
      function f(game,turn,velocities,project,teams) {
+	 if (Math.random() < 0.33333) { // a 50% chance
+	     var project = get_project_from_sym(project,game.projects);	     
+	     // now we want to find the biggest unmet goal and split it.
+	     // This is a choice not taking current velocity into account.
+	     var goals = project;
+	     var index = Math.floor(Math.random() * (goals.length - 2));
+	     console.log(index);
+	     // Our basic algorithm is to compute the next lowest goal (which may be zero),
+	     // and to split the number of victory points and take the mean of the velocities.
+	     var top_vel = goals[index+2][1];
+	     var top_vp =  goals[index+2][2];
+	     var bot_vel = (index > 0) ? goals[index+2-1][1] : 0 ;
+	     var vp = top_vp/2;
+	     var new_goal = [""+goals[index+2][0]+"split",(bot_vel+top_vel)/2,vp];
+	     // now the victory points of the top goal must be adjust...
+	     goals[index+2][2] = top_vp - vp;
+	     // now we must inject the new goal...
+	     console.log(goals);
+	     goals.splice(index+2, 0, new_goal);
+	     console.log(goals);
+	 }
 	 return velocities;
      },
     ],
     ["DevOps Expert. Each team on project gets a 10% bonus.",
-     "DevOps Expert",
+     "DevOps_Expert",
      "cap",
      function f(game,turn,velocities,project,teams) {
 	 console.log(velocities);
 	 var nvels = velocities[1].map(x => $.isNumeric(x) ? (x*1.1) : x);
 	 return [velocities[0],nvels];
      },
-
     ],
     ["Agile Coach. No team will produce less than 10 story points.",
-     "Agile Coach",
+     "Agile_Coach",
      "cap",          
      function f(game,turn,velocities,project,teams) {
 	 console.log(velocities);
 	 var nvels = velocities[1].map(x => $.isNumeric(x) ? Math.max(x,10) : x);
 	 return [velocities[0],nvels];
      },
-
     ],
     ["Superb Product Owner. 50% chance of decreasing story point requiremenst by 30%/",
-     "Product Owner.",
+     "Product_Owner.",
      "cap",     
      function f(game,turn,velocities,project,teams) {
+	 if (Math.random() < 0.5) { // a 50% chance
+	     var project = get_project_from_sym(project,game.projects);
+	     // now we want to find the biggest unmet goal and split it.
+	     // This is a choice not taking current velocity into account.
+	     var goals = project;
+	     var index = Math.floor(Math.random() * (goals.length - 2));
+	     goals[index+2][1] = goals[index+2][1] * 0.7;
+	 }
 	 return velocities;
      },
     ],
@@ -444,7 +471,6 @@ function exec_team_event_draws(event,game,alist,teams,caps,turn,turn_num,team_ev
 	// if we have capabilities, we are almost ready to apply the generalized functions...
 	console.log("psym, cap" + psym + " , " + capability);
 	var f = capability[3];
-
 	velocity = f(game,turn,velocity,psym,team);
     }
 
