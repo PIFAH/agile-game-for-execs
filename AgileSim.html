@@ -55,7 +55,7 @@
 
 
   <div class="page-header">
-    <h1><center>Sprint #: <span id="sprint"></span>  Total Victory Points: <span id="score"></span></center></h1>
+    <h1><center>Sprint #: <span id="sprint"></span>  Total Business Value Points: <span id="score"></span></center></h1>
       </div>
 <div class="row">
     <div class="col-md-4">
@@ -76,9 +76,29 @@
     <script src="https://ajax.googleapis.com/ajax/libs/jquery/1.11.3/jquery.min.js"></script>
     <!-- Include all compiled plugins (below), or include individual files as needed -->
     <script src="js/bootstrap.min.js"></script>
+
+    <footer class="footer">
+      <p>
+      <div class="container well">
+        <p class="text-muted">This game is actively being developed in April, 2016. Send suggestions <a href="mailto:read.robert@gmail.com">read.robert@gmail.com</a>. It is meant to teach executives who run multiple projects the value and use of Agile methods.
+	  <a href="https://github.com/PIFAH/agile-game-for-execs">View the Project on GitHub <small>PIFAH/agile-game-for-execs</small></a></p>
+      </div>
+    </footer>
+
   </body>
 
-<script>
+    <script>
+
+/*
+Some short instructions at the beginning would help.
+Having two random draws for some teams is not explained.
+Turn history is mislabeled.
+Wants an "encyclopedia" for each concept in the game, giving a paragraph explaining each event, expert, team, and notion.
+Move the "Events" page to the top of the page, and keep that turns events in place until the "next Sprint" button is pushed.
+Have project-specific banners.
+Wording like "Assign resources for each team"
+Business rules teach agile, but right now lack of explanation hinders understanding
+*/
 
 // Now we will attempt to reconstruct the game mechanics in javascript from the LISP code that I developed
 
@@ -126,6 +146,31 @@ var global_events = [
      function f(v) { return v / 4; },
      function f(v) {return v;}     
     ],
+    ["Org-wide event manadated. Subtract one point from each team velocity.",
+     "Org-wide-event",
+     function (v) { return Math.max(v-1,0); },
+     function (v) { return v; }
+    ],
+    ["Natural disaster! All teams take 10% penalty.",
+     "No-Disaster",
+     function (v) { return v*0.9; },
+     function (v) { return v; }
+    ],
+    ["3 paycheck month. All teams get one extra velocity point.",
+     "Three-paycheck-month",
+     function (v) { return v+1; },
+     function (v) { return v; }
+    ],
+    ["Zombie apocalypse! All team velocity reduced to zero.",
+     "Zombie-apocalypse",
+     function (v) { return 0; },
+     function (v) { return v; }
+    ],
+    ["No news is good news.",
+     "No-News-Is-Good-News",
+     function (v) { return v; },
+     function (v) { return v; }
+    ],
     ["No news is good news.",
      "No-News-Is-Good-News",
      function (v) { return v; },
@@ -146,6 +191,8 @@ var titles = [ { score: 100,
 		 title: "We want to keep you from hurting yourself in the future." },
 	       { score: 200,
 		 title: "We are deeply disappointed." },
+	       { score: 250,
+		 title: "We see room for improvement." },
 	       { score: 300,
 		 title: "We think you have potential." },
 	       { score: 400,
@@ -182,55 +229,135 @@ function draw_velocity() {
 }
 
 var team_resources  = [
-    ["Average Team. Draw 1 Velocity Card. Draw 1 Discovery Card on Even-numbered Rounds.",
+    ["Average Team. Draw 2 Velocity Card. ",
      "Average_Team",
      function f(game,turn) {
 	return [draw_velocity(),draw_velocity()]
-     }
+     },
+     "Average Team",     
     ],
-    ["Elite Team. Draw 2 Velocity Cards. Draw 1 Discovery Card on Even-numbered Rounds.",
+    ["Elite Team. Teams vary in their skil.  An Elite, cohesive team can be far more effective than other team. Draw 3 velocity cards each sprint.",
      "Elite_Team",
      function f(game,turn) {
-	return [draw_velocity(),draw_velocity()]
-     }
+	 return [draw_velocity(),draw_velocity(),draw_velocity()]
+     },
+     "Elite Team",
     ],
-    ["Test-Driven-Team. Draw 2 Velocity Cards, no card is ever zero. Draw 1 Discovery Card on Even-numbered Rounds.",
+    ["Test-Driven-Team. Test Driven Development creates steady progress toward any goal. Draw 2 Velocity Cards, no card is ever less than 10.",
      "Test_Driven_Team",
      function f(game,turn) {
 	 return [Math.max(10,draw_velocity()),Math.max(10,draw_velocity())];
-      }
+     },
+     "Test-Driven Team",
     ],
-    ["User-focused Team. Draw 1 Velocity Card. Draw 1 Discovery Card every Turn.",
+    ["User-focused Team. User focused team consistently produce valuable progress.  Draw one velocity card and add  5.",
      "User_Focused_Team",
      function f(game,turn) {
-	return [draw_velocity()]
-     }
+	return [draw_velocity()+5]
+     },
+     "User-Focused Team",     
     ],
-    ["Blame Culture Team. Draw 1 Velocity Card and substract 5 from it.",
+    ["Blame Culture Team. Blame culture teams exhibit poor cooperation and user responsiveness. Draw one velocity card and subtract 5.",
      "Blame_Culture_Team",
           function f(game,turn) {
-	      return [draw_velocity() - 5];
+	      return [Math.max(draw_velocity() - 5,0)];
 	  }
+     ,
+     "Blame Culture Team",          
     ],
-    // TODO: These rules are not correct, need to add in randomness!!
-    ["Insecure Team. Draw 2 Velocity cards 50% of the time, 0 in other case. Draw 1 Discovery Card on Odd-numbered Rounds.",
+    ["Insecure Team. Insecure teams have a hard time properly taking user needs into acocunt.  Draw one velocity card, and substract 5, but never go below zero.",
      "Insecure_Team",
      function f(game,turn) {
-	 return [draw_velocity() - 5];
-     }
+	 return [Math.max(draw_velocity() - 5,0)];
+     },
+     "Insecure Team",               
     ],
-    ["Erratic Team. Draw 2 Velocity cards 50% of the time, 0 in other case. Draw 1 Discovery Card on Odd-numbered Rounds.",
+    ["Erratic Team. Erratic teams use Agile poorly and do not produce smooth consistent velocity and are hard to manage. Draw one velocity card, and multiply by 2",
      "Erratic_Team",
      function f(game,turn) {
-	 return [draw_velocity() - 5];
-     }
+	 return [draw_velocity()*2];
+     },
+     "Erratic Team",                    
     ]
 ];
 
+var capability_resources  = [
+    ["User Expeperience Expert. Each turn, has 33% chance of splitting one goal from associated project, chosen at random.",
+     "UX_Expert",
+     "cap",     
+     function f(game,turn,velocities,project,teams) {
+	 if (Math.random() < 0.33333) { // a 50% chance
+	     var project = get_project_from_sym(project,game.projects);	     
+	     // now we want to find the biggest unmet goal and split it.
+	     // This is a choice not taking current velocity into account.
+	     var goals = project;
+	     var index = Math.floor(Math.random() * (goals.length - 2));
+	     console.log(index);
+	     // Our basic algorithm is to compute the next lowest goal (which may be zero),
+	     // and to split the number of business value points and take the mean of the velocities.
+	     var top_vel = goals[index+2][1];
+	     var top_vp =  goals[index+2][2];
+	     var bot_vel = (index > 0) ? goals[index+2-1][1] : 0 ;
+	     var vp = top_vp/2;
+	     var new_goal = [""+goals[index+2][0]+"split",(bot_vel+top_vel)/2,vp];
+	     // now the business value points of the top goal must be adjust...
+	     goals[index+2][2] = top_vp - vp;
+	     // now we must inject the new goal...
+	     console.log(goals);
+	     goals.splice(index+2, 0, new_goal);
+	     console.log(goals);
+	 }
+	 return velocities;
+     },
+     "UX Expert",
+    ],
+    ["DevOps Expert. Each team on project gets a 10% bonus.",
+     "DevOps_Expert",
+     "cap",
+     function f(game,turn,velocities,project,teams) {
+	 console.log(velocities);
+	 var nvels = velocities[1].map(x => $.isNumeric(x) ? (x*1.1) : x);
+	 return [velocities[0],nvels];
+     },
+     "DevOps Expert",     
+    ],
+    ["Agile Coach. No team will produce less than 10 story points.",
+     "Agile_Coach",
+     "cap",          
+     function f(game,turn,velocities,project,teams) {
+	 console.log(velocities);
+	 var nvels = velocities[1].map(x => $.isNumeric(x) ? Math.max(x,10) : x);
+	 return [velocities[0],nvels];
+     },
+     "Agile Coach",          
+    ],
+    ["Superb Product Owner. 50% chance of decreasing story point requiremenst by 30%/",
+     "Product_Owner.",
+     "cap",     
+     function f(game,turn,velocities,project,teams) {
+	 if (Math.random() < 0.5) { // a 50% chance
+	     var project = get_project_from_sym(project,game.projects);
+	     // now we want to find the biggest unmet goal and split it.
+	     // This is a choice not taking current velocity into account.
+	     var goals = project;
+	     var index = Math.floor(Math.random() * (goals.length - 2));
+	     goals[index+2][1] = goals[index+2][1] * 0.7;
+	 }
+	 return velocities;
+     },
+     "oProduct Owner",               
+    ],
+];
+
 var projects = [
-    ["Case Management System.",
+    ["Case Management System (with MVP).",
      "Case-Managment-Project",
      ["MVP",50,50],
+     ["Limited",150,100],
+     ["Full",200,50]
+    ],
+    ["Case Management System (without MVP).",
+     "Case-Managment-Project",
      ["Limited",150,100],
      ["Full",200,50]
     ],
@@ -239,24 +366,32 @@ var projects = [
      ["Full",150,150]     
     ],
     ["Legacy Rewrite. Each Step has better ROI.",
-     "Rejuvenation-Project",
+     "Legacy-Rewrite-Project",
      ["A", 80, 20],
      ["B", 100, 30],
      ["C", 120, 40],
      ["D", 140, 50],
      ["E", 150, 60]
     ],
-    ["Faster-than-light drive.",
-     "FTL-Project",
-     ["A",30,30],
-     ["B",100,100],
+    ["Legacy Rewrite with single-day switch-over.",
+     "Legacy Rewrite with single-day switch-over.",
      ["C",200,200]
     ],
-    ["Giga-watt-hour super capacitor",
-     "Super-Capacitor-Project",
-     ["A", 10, 10],
-     ["B", 100, 100],
-     ["C", 150, 150]
+    ["508 compliance project with many sub-goals",
+     "508-Compliance-Project",
+     ["A", 20, 20],
+     ["B", 40, 20],
+     ["C", 60, 20],
+     ["D", 80, 20],     
+    ],
+    ["6-phase project",
+     "6-phase-project",
+     ["A", 30, 30],
+     ["B", 60, 30],
+     ["C", 90, 30],
+     ["D", 120, 30],
+     ["E", 150, 30],
+     ["F", 180, 30]     
     ]
 ];
 
@@ -286,19 +421,26 @@ function choose_n_without_replacement(a,n) {
     return result;
 }
 
-function cons_game(projects,teams,event,turns) {
+function cons_game(projects,teams,capabilities,event,turns) {
     return { projects: projects.slice(),
 	     global_cards: global_events,
+	     global_series: choose_n_without_replacement(global_events.slice(0),MAX_NUM_TURNS),
 	     teams: teams,
+	     caps: capabilities,
 	     turns: turns};
 }
 var NUM_PROJECTS = 3;
 var NUM_TEAMS = 5;
+var NUM_CAPABILITIES = 2;
 
 function start_game() {
     // A game consists of projects, turns, resource assignments, etc.
+    var nprojects = projects.slice();
+    var nteam_resources = team_resources.slice();
+    var cap_resources = capability_resources.slice();
     return cons_game(choose_n_without_replacement(projects,NUM_PROJECTS),
 		     choose_n_without_replacement(team_resources,NUM_TEAMS),
+		     choose_n_without_replacement(cap_resources,NUM_CAPABILITIES),
 		     [],
 		     []);
 }
@@ -309,34 +451,68 @@ function create_turn(alist,global_events) {
 		    team_cards: [] }};
 }
 
-function exec_team_event_draws(event,game,alist,teams,turn,turn_num,team_events,n,results) {
+function get_project_team_is_assigned_to(team,alist) {
+    var assignments = alist.filter(function (item) { return item[0] == team[1];});
+    var assignment = assignments[0];
+    return assignment[1];
+}
+
+function all_capabilites_assigned_to_project(psym,alist) {
+    var cap_ids = alist.filter(function (item)
+			       { return (item[1] == psym) &&
+				 (capability_resources.filter(
+				     function(cap) {
+					 return cap[1] == item[0];
+				     })).length > 0;
+				 }
+			      );
+    return cap_ids;
+}
+
+function exec_team_event_draws(event,game,alist,teams,caps,turn,turn_num,team_events,n,results) {
     var vel_func = turn.turn.global_cards[2];
-    //    var results = [];
-    //    for(var i = 0; i < teams.length; i++) {
+
     i = n;
     var team = teams[i];
     var draw_func = team[2];
     var draws = draw_func(game,turn);
     var draws_x = draws.map(vel_func);
     var velocity = [team[1],draws_x];
+    // Here is our opportunity to adjust velocity based on metat rules....
+    // Since we are drawing on the basis of individual teams,
+    // we really need to know which project this team is attached to so that we
+    // can compute all capabilities attached to that team...
+
+    var psym = get_project_team_is_assigned_to(team,alist);
+    
+    var pcaps = all_capabilites_assigned_to_project(psym,alist);
+    for(var j = 0; j < pcaps.length; j++) {
+	var cap_id = pcaps[j][0];
+	var capability = capability_resources.filter(x => x[1] == cap_id)[0];
+	// if we have capabilities, we are almost ready to apply the generalized functions...
+	console.log("psym, cap" + psym + " , " + capability);
+	var f = capability[3];
+	velocity = f(game,turn,velocity,psym,team);
+    }
+
     $( "#projectrows" ).append( $("<h4>"+ team[1]+":</h4>"));
     $( "#projectrows" ).append($( "<h4> "+summation(velocity[1])+" ...total story points!</h4>"));
     results[i] = velocity;
     setTimeout(function f() {
 	if ((n+1) >= teams.length) {
 	    setTimeout(function g() {
-		finalize_turn(event,game,alist,teams,turn,turn_num,results);
+		finalize_turn(event,game,alist,teams,caps,turn,turn_num,results);
 	    },500);
 	} else {
-	    exec_team_event_draws(event,game,alist,teams,turn,turn_num,team_events,n+1,results);
+	    exec_team_event_draws(event,game,alist,teams,caps,turn,turn_num,team_events,n+1,results);
 	}
     }, 800);
 
     return results;
 }
 
-function choose_global_event(global_event) {
-    var event = global_event.randomElement();
+function choose_global_event(global_events) {
+    var event = global_events.randomElement();
     // Let's Blank the screen and render this with a sleep as a big deal....
     getRidOfSpace();
     $( "#projectrows" ).append( $( "<h1> "+"Let's see what is going on outside of your control..."+"</h1>"  ) );
@@ -420,7 +596,7 @@ function summation(value) {
 function get_velocity(project,turnx) {
     turn = turnx.turn;
     // TODO: probably should swap out with the plural version above...
-    var team = getKeyByValue(project,turn.assignments);
+//    var team = getKeyByValue(project,turn.assignments);
     
     var team_cards = turn.team_cards;
     var sum = 0;
@@ -449,6 +625,10 @@ function compute_velocity_project_through_turns(game,project,turns) {
     for(var i = 0; i < turns.length; i++) {
 	var turn = turns[i];
 	var v = get_velocity(project,turn);
+	if (v < 0) {
+	    console.log("  i, v "+ i + " , " + v);	    
+	    console.log(" project "+ project);
+	}
 	sum += v;
     }
     return sum;
@@ -498,6 +678,7 @@ function add_turn_and_events(game,turn,global,events) {
     var new_game = cons_game(
 	game.projects,
 	game.teams,
+	game.caps,
 	[],
 	game.turns);
     return new_game;
@@ -514,22 +695,26 @@ function get_project_symbols(game) {
 
 function make_turn(game,alist) {
     var teams = game.teams;
+    var caps = game.caps;
     var turns = game.turns;
     var turn_num = 1 + turns.length;
-    var event = choose_global_event(global_events);
+    var event = game.global_series[turns.length];
+    if (!event) {
+	event = global_events.random_element();
+    }
     setTimeout(function f() {
-	intermediate(event,game,alist,teams,turns,turn_num,event);
+	intermediate(event,game,alist,teams,caps,turns,turn_num,event);
     },1000);
 }
 
-function intermediate(event,game,alist,teams,turns,turn_num,event) {
+function intermediate(event,game,alist,teams,caps,turns,turn_num,event) {
     $( "#projectrows" ).append( $( "<h1 style='{color: red; }'> "+event[0]+"</h1>"  ) );
     setTimeout(function f() {
-	complete_turn(event,game,alist,teams,turns,turn_num,event);
+	complete_turn(event,game,alist,teams,caps,turns,turn_num,event);
     },1000);
 }
 
-function complete_turn(event,game,alist,teams,turns,turn_num,event) {
+function complete_turn(event,game,alist,teams,caps,turns,turn_num,event) {
     // TODO: It seems that here I would have to break this into a a continuation-style
     // double function if I want this work with a dramatic pause.
     var turn = create_turn(alist,event);
@@ -550,13 +735,15 @@ function complete_turn(event,game,alist,teams,turns,turn_num,event) {
 	});
     }
     var results = [];
-    var team_events = exec_team_event_draws(event,game,alist,teams,turn,turn_num,team_events,0,results);
-//    finalize_turn(event,game,alist,teams,turn,turn_num,team_events);
+    var team_events = exec_team_event_draws(event,game,alist,teams,caps,turn,turn_num,team_events,0,results);
 }
-function finalize_turn (event,game,alist,teams,turn,turn_num,team_events) {
+
+
+var MAX_NUM_TURNS = 6;		       
+function finalize_turn (event,game,alist,teams,caps,turn,turn_num,team_events) {
     var new_game = add_turn_and_events(game,turn,event,team_events);
 
-    new_game.victory_points = total_score(new_game);
+    new_game.business_value_points = total_score(new_game);
 
     var velocities = compute_velocitys_through_turn(game,turn_number+1);
     
@@ -580,11 +767,6 @@ function finalize_turn (event,game,alist,teams,turn,turn_num,team_events) {
     
     return new_game;
 }
-
-
-
-var MAX_NUM_TURNS = 2;
-
 
 var data = new Array(NUM_PROJECTS);
 var turn_number = 0;
@@ -696,7 +878,7 @@ function draw(game,data,name,title,project) {
         .attr("text-anchor", "middle")  
         .style("font-size", "16px") 
         .style("text-decoration", "underline")  
-		  .text("Goal: "+goal[0]+" vp: "+goal[1]);
+		  .text("Goal: "+goal[0]+" vp: "+goal[2]);
 		  
 	svg.append("line")          // attach a line
 	    .style("stroke", (v >= goal[1]) ? "green" : "red")  // colour the line
@@ -710,6 +892,7 @@ function draw(game,data,name,title,project) {
     return svg;
 };
 
+// What the heck does this do?
 function type(d) {
   d.velocity = +d.velocity;
   return d;
@@ -732,6 +915,12 @@ function startNewGame() {
 	var team = teams[i];
 	var project = game.projects.randomElement()[1];
 	init_assignments.push([team[1],project]);
+    }
+    var caps = game.caps;
+    for(var i = 0; i < caps.length; i++) {
+	var cap = caps[i];
+	var project = game.projects.randomElement()[1];
+	init_assignments.push([cap[1],project]);
     }
     game.assignments = init_assignments;
     redraw(game);
@@ -795,8 +984,23 @@ function moveUp() {
 		
 
 function renderTeam(team_id) {
+    var team = team_resources.filter(function (item) { return item[1] == team_id;});
+    var team_text;
+    var label;
+    if (team.length) {
+	team_text = team[0][0];
+	label = team[0][3];
+    } else  {
+	var cap = capability_resources.filter(function (item) { return item[1] == team_id;});
+	if (cap.length) {
+	    team_text = cap[0][0];
+	    label = cap[0][4];
+	} else {
+	    console.log("bad team_id:"+team_id);
+	}
+    }
     var justified_button_group = 
-    '<div class="btn-group" role="group" >\
+    '<div class="btn-group" role="group" data-toggle="tooltip" title="' + team_text + '">\
   <div class="btn-group" role="group">\
     <button type="button" id='+team_id+' class="btn btn-default movedn"><span class="glyphicon glyphicon-arrow-down" aria-hidden=true></span></button>\
   </div>\
@@ -805,12 +1009,14 @@ function renderTeam(team_id) {
   </div>\
   <div class="btn-group" role="group"> \
 <button type="button" class="btn btn-default">';
-    var remainder = team_id+'</button> \
+    var remainder = label+'</button> \
   </div> \
 </div>';
+
+   $('[data-toggle="tooltip"]').tooltip(); 
+
     return justified_button_group+remainder;
-	
-    return $( "<div class='teamrep'><button>"+ team_id+ "</button><button class='movedn' id='"+team_id+"'>Move Down</button><button class='moveup' id='"+team_id+"'>Move Up</button></div>");    
+    
 }
 
 function get_global_events_html(events) {
@@ -852,7 +1058,8 @@ function render_team_events_html(game,turn,events) {
     for(var j = 0; j < events.length; j++) {
 	var assoc = events[j];
 	result += "<tr>";
-	result += "<td>"+assoc[0]+" </td><td> "+assoc[1] +"</td><td> " + find_project(turn.turn.assignments,assoc[0]) + "</td>";
+	var formatted = assoc[1].map( x => x.toFixed(1));
+	result += "<td>"+assoc[0]+" </td><td> "+ formatted +"</td><td> " + find_project(turn.turn.assignments,assoc[0]) + "</td>";
 	result += "</tr>";
     }
     result += "</tbody>";    
@@ -889,10 +1096,11 @@ function get_game_history(game) {
     var turns = game.turns;
     var history = ""; 
     for(var i = 0; i < turns.length; i++) {
-	var num = turns.length - 1 - i;
+	var inverse = turns.length - 1 - i;
+	var num = i;
 	var turn = turns[num];
 	var history_turn = get_history_report(turn).join("");
-	history += "<h3> Turn : "+(num+1)+ "</h3>";
+	history += "<h3> Turn : "+(inverse+1)+ "</h3>";
 	history += history_turn;
     }
     return history;
@@ -928,8 +1136,8 @@ function redraw(game) {
 	    }
 	}
 
-	$( "#left"+name ).append( $( "<h4 class='victorypoints' id='vp" + name + "'>DEFEAT</h4>" ) );
-	$( "#vp"+name ).text("Victory Point So Far: "+total_scores[i]);
+	$( "#left"+name ).append( $( "<h4 class='businessvaluepoints' id='vp" + name + "'>DEFEAT</h4>" ) );
+	$( "#vp"+name ).text("Business Value Point So Far: "+total_scores[i]);
 
 	// Now generate data for this project...
 	// Pass in the project title...
@@ -980,7 +1188,10 @@ function executeTurn() {
 
     // This takes an association list of teams associated to projects...
     // will deal with that later
-    make_turn(game,game.assignments);
+
+    // This slice is a stop-gap test --- I probably when we do a turn
+    // we need to make a copy of game.assignments, since they will be changing.
+    make_turn(game,game.assignments.slice(0));
 
 }
 
