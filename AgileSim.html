@@ -52,47 +52,49 @@
 </style>
   <body>
     <div class="container">
-
-
-  <div class="page-header">
-    <h1><center>Sprint #: <span id="sprint"></span>  Total Business Value Points: <span id="score"></span></center></h1>
+      <div class="page-header">
+	<h1><center>Sprint #: <span id="sprint"></span>  Total Business Value Points: <span id="score"></span></center></h1>
       </div>
-<div class="row">
-    <div class="col-md-4">
-    <button onclick="startNewGame()">Start Game</button>
-    </div>
-    <div class="col-md-8">
-    <button onclick="executeTurn()">Execute Turn</button>
-    </div>
+      <div class="row">
+	<div class="col-md-4">
+	  <button onclick="startNewGame()">Start New Game</button>
+	</div>
+	<div class="col-md-8">
+	  <button onclick="executeTurn()">Execute Turn</button>
+	</div>
 
-</div>
-<div class="row" id="messagebanner">
-</div>
-
-      <div class="row" id="projectrows">
+      <div class="row" id="eventreporting">
       </div>
-    </div>
-    <!-- jQuery (necessary for Bootstrap's JavaScript plugins) -->
-    <script src="https://ajax.googleapis.com/ajax/libs/jquery/1.11.3/jquery.min.js"></script>
-    <!-- Include all compiled plugins (below), or include individual files as needed -->
-    <script src="js/bootstrap.min.js"></script>
 
-    <footer class="footer">
-      <p>
-      <div class="container well">
-        <p class="text-muted">This game is actively being developed in April, 2016. Send suggestions <a href="mailto:read.robert@gmail.com">read.robert@gmail.com</a>. It is meant to teach executives who run multiple projects the value and use of Agile methods.
-	  <a href="https://github.com/PIFAH/agile-game-for-execs">View the Project on GitHub <small>PIFAH/agile-game-for-execs</small></a></p>
+
+	<div class="row" id="projectrows">
       </div>
-    </footer>
+      </div>
+      <div class="row" id="messagebanner">
+      </div>
 
-  </body>
+    </div>
+
+<!-- jQuery (necessary for Bootstrap's JavaScript plugins) -->
+<script src="https://ajax.googleapis.com/ajax/libs/jquery/1.11.3/jquery.min.js"></script>
+<!-- Include all compiled plugins (below), or include individual files as needed -->
+<script src="js/bootstrap.min.js"></script>
+
+<footer class="footer">
+  <p>
+    <div class="container well">
+      <p class="text-muted">This game is actively being developed in April, 2016. Send suggestions <a href="mailto:read.robert@gmail.com">read.robert@gmail.com</a>. It is meant to teach executives who run multiple projects the value and use of Agile methods.
+	<a href="https://github.com/PIFAH/agile-game-for-execs">View the Project on GitHub <small>PIFAH/agile-game-for-execs</small></a></p>
+    </div>
+</footer>
+
+</body>
 
     <script>
 
 /*
 Some short instructions at the beginning would help.
 Having two random draws for some teams is not explained.
-Turn history is mislabeled.
 Wants an "encyclopedia" for each concept in the game, giving a paragraph explaining each event, expert, team, and notion.
 Move the "Events" page to the top of the page, and keep that turns events in place until the "next Sprint" button is pushed.
 Have project-specific banners.
@@ -345,7 +347,7 @@ var capability_resources  = [
 	 }
 	 return velocities;
      },
-     "oProduct Owner",               
+     "Product Owner",               
     ],
 ];
 
@@ -495,8 +497,8 @@ function exec_team_event_draws(event,game,alist,teams,caps,turn,turn_num,team_ev
 	velocity = f(game,turn,velocity,psym,team);
     }
 
-    $( "#projectrows" ).append( $("<h4>"+ team[1]+":</h4>"));
-    $( "#projectrows" ).append($( "<h4> "+summation(velocity[1])+" ...total story points!</h4>"));
+    $( "#eventreporting" ).append( $("<h4>"+ team[1]+":</h4>"));
+    $( "#eventreporting" ).append($( "<h4> "+summation(velocity[1])+" ...total story points!</h4>"));
     results[i] = velocity;
     setTimeout(function f() {
 	if ((n+1) >= teams.length) {
@@ -515,8 +517,8 @@ function choose_global_event(global_events) {
     var event = global_events.randomElement();
     // Let's Blank the screen and render this with a sleep as a big deal....
     getRidOfSpace();
-    $( "#projectrows" ).append( $( "<h1> "+"Let's see what is going on outside of your control..."+"</h1>"  ) );
-    $( "#projectrows" ).append( $( "<h1> "+"Drum roll please..."+"</h1>"  ) );
+    $( "#eventreporting" ).append( $( "<h1> "+"Let's see what is going on outside of your control..."+"</h1>"  ) );
+    $( "#eventreporting" ).append( $( "<h1> "+"Drum roll please..."+"</h1>"  ) );
 
     // Apparently this is dangerous, but I don't really want to rewrite everything
     // in a continuation style.... I suppose rendering a button would be a way to do this...
@@ -708,7 +710,7 @@ function make_turn(game,alist) {
 }
 
 function intermediate(event,game,alist,teams,caps,turns,turn_num,event) {
-    $( "#projectrows" ).append( $( "<h1 style='{color: red; }'> "+event[0]+"</h1>"  ) );
+    $( "#eventreporting" ).append( $( "<h1 style='{color: red; }'> "+event[0]+"</h1>"  ) );
     setTimeout(function f() {
 	complete_turn(event,game,alist,teams,caps,turns,turn_num,event);
     },1000);
@@ -1107,7 +1109,8 @@ function get_game_history(game) {
 }
 
 function redraw(game) {
-    getRidOfSpace();
+    $( "#projectrows" ).empty();
+    $("#messagebanner").empty();
     // We need to create the divs that we will load
     var projects = get_projects(game);
     var total_scores = total_score(game);
@@ -1162,9 +1165,11 @@ function redraw(game) {
 }
 
 function getRidOfSpace() {
+    $( "#eventreporting" ).empty();			   
     $( "#projectrows" ).empty();
     $("#messagebanner").empty();
-}
+			   }
+
 
 function get_title(score,titles) {
     var cur = 0;
@@ -1183,8 +1188,9 @@ function get_title(score,titles) {
 
 function executeTurn() {
     // This is a crummy version of executing a turn, we'll just add
-    // a some data...
-    getRidOfSpace();
+   // a some data...
+    $( "#eventreporting" ).empty();			   			   
+
 
     // This takes an association list of teams associated to projects...
     // will deal with that later
