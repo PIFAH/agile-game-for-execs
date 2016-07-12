@@ -61,6 +61,12 @@ font-weight: bold;
 font-size: large;
 text-align: center;
 }
+#messagebanner {
+font-size: large;
+}
+#gameovermessage {
+color: red;
+}
 
 </style>
   <body>
@@ -77,6 +83,35 @@ text-align: center;
 	</div>
 
       <div class="row" id="messagebanner">
+<p>
+Welcome, Agile Executive! This game is meant to help you think about Agile methodology. We assume that it is your job to manage 
+more than one software development team, and a number of experts. In this game, your resources are randomly decided at the start
+of the game, and the three projects in our portfolio that you have to work on are decided for you as well.
+</p>
+<p>
+However, you have the power to assign resources to projects.  Your resources are all either teams, or experts. Teams write software.
+Experts don't write software, but they can strongly effect a team or a project.
+</p>
+<p>
+    Your goal is to provide as much Business Value as you can in six sprints. These are measured in Business Value Points.
+    Each project may have one or more goal, which provides Business Value points.  To reach a goal, you have to write a certain
+amount of software, which is measured in Story Points.  Teams produce a random number of Story points each sprint, but some some
+teams tend to produce more or less than others.  A basic team produces either zero, ten, or twenty story points randomly.
+    Some better teams get two such random story point events, but each event is still random.
+    </p>
+
+    <p>
+    To do well in the game, you have to assign your teams and experts well to each project, possibly changing them each sprint.
+    You will likely not get all of the possible goals of each project done in six sprints due to random events beyond your
+control, so choose which projects you assign resources to carefully. Your score is based solely on the Business Value Points
+that you provide, not completing all projects.
+    </p>
+
+    <p>
+    In actuality, you can't move a team onto a project in a single two week sprint without a loss of efficiency. However, Agile
+methods are designed to minimize the cost of such resource allocation, and if we tried to make the game too realistic,
+it wouldn't be very fun.
+    </p>
       </div>
 
       <div class="row" id="eventreporting">
@@ -772,7 +807,7 @@ function finalize_turn (event,game,alist,teams,caps,turn,turn_num,team_events) {
     if (game.turns.length >= MAX_NUM_TURNS) {
 	alert("Game Over!");
 	var title = get_title(summation(total_score(game)),titles);
-	$("#messagebanner").append("    <div class='col-md-12'><center><h1 style='{color: red;}'>Game Over: "+title.title + "</h1></center></div>");
+	$("#messagebanner").append("    <div class='col-md-12'><center><h1 id='gameovermessage' style='{color: red;}'>Game Over: "+title.title + "</h1></center></div>");
 	leaderboard.push(title);
 	$("#messagebanner").append(render_leader_board());
     }
