@@ -49,11 +49,24 @@
 .teamrep {
  margin: 10px 10px 10px 10px;
 }
+
+.businessvaluepoints {
+font-weight: bold;
+font-size: large;
+text-align: center;
+
+}
+.assignresources {
+font-weight: bold;
+font-size: large;
+text-align: center;
+}
+
 </style>
   <body>
     <div class="container">
       <div class="page-header">
-	<h1><center>Sprint #: <span id="sprint"></span>  Total Business Value Points: <span id="score"></span></center></h1>
+	<h1><center>Sprint #: <span id="sprint"> -- </span>  Total Business Value Points: <span id="score"></span></center></h1>
       </div>
       <div class="row">
 	<div class="col-md-4">
@@ -63,14 +76,14 @@
 	  <button onclick="executeTurn()">Execute Turn</button>
 	</div>
 
+      <div class="row" id="messagebanner">
+      </div>
+
       <div class="row" id="eventreporting">
       </div>
 
-
 	<div class="row" id="projectrows">
       </div>
-      </div>
-      <div class="row" id="messagebanner">
       </div>
 
     </div>
@@ -96,9 +109,6 @@
 Some short instructions at the beginning would help.
 Having two random draws for some teams is not explained.
 Wants an "encyclopedia" for each concept in the game, giving a paragraph explaining each event, expert, team, and notion.
-Move the "Events" page to the top of the page, and keep that turns events in place until the "next Sprint" button is pushed.
-Have project-specific banners.
-Wording like "Assign resources for each team"
 Business rules teach agile, but right now lack of explanation hinders understanding
 */
 
@@ -710,6 +720,7 @@ function make_turn(game,alist) {
 }
 
 function intermediate(event,game,alist,teams,caps,turns,turn_num,event) {
+// This needs to be dependent on the project....		
     $( "#eventreporting" ).append( $( "<h1 style='{color: red; }'> "+event[0]+"</h1>"  ) );
     setTimeout(function f() {
 	complete_turn(event,game,alist,teams,caps,turns,turn_num,event);
@@ -1069,6 +1080,27 @@ function render_team_events_html(game,turn,events) {
     return result;
 }
 
+function render_team_events_html_project(game,turn,events,project) {
+    var result = "";
+    result += "<table class='table table-bordered table-striped'>";
+    result += "<caption>Velocities</caption> <thead> <tr> <th>Team</th> <th>Velocity</th> <th>Project</th> </tr> </thead>";
+    result += "<tbody class='table-striped'>";
+    var psyms = get_project_symbols(game);
+    for(var j = 0; j < events.length; j++) {
+	var assoc = events[j];
+	result += "<tr>";
+	var formatted = assoc[1].map( x => x.toFixed(1));
+	var projectx = find_project(turn.turn.assignments,assoc[0]);
+	if (projectx === project) {
+	result += "<td>"+assoc[0]+" </td><td> "+ formatted +"</td><td> " + project + "</td>";
+	    result += "</tr>";
+	}
+    }
+    result += "</tbody>";    
+    result += "</table>";
+    return result;
+}
+
 
 function render_leader_board(game) {
     var result = "";
@@ -1094,6 +1126,11 @@ function get_history_report(turn) {
     return [global_event_html,team_event_html];
 }
 
+function get_history_report_project(turn,project) {
+    var team_event_html = render_team_events_html_project(game,turn,turn.turn.team_cards,project);
+    return team_event_html;
+}
+
 function get_game_history(game) {
     var turns = game.turns;
     var history = ""; 
@@ -1106,6 +1143,22 @@ function get_game_history(game) {
 	history += history_turn;
     }
     return history;
+}
+
+function get_game_history_project(game,project,turn) {
+    var turns = game.turns;
+    var history = ""; 
+    var history_turn = get_history_report_project(turn,project[1]);
+    return history_turn;
+}
+function recentEventsForThisProject(game,project) {
+    var turn = game.turns[0];
+    if (turn) {
+	var history_project = get_game_history_project(game, project,turn);
+	return history_project;
+    } else {
+	return "";
+    }
 }
 
 function redraw(game) {
@@ -1126,9 +1179,9 @@ function redraw(game) {
 
 	$( "#projectrows" ).append( $( "<div class='row' id='" + name + "'/>"));
 
-	$( "#"+name ).append( $( "<div class='col-md-4' id='left" + name + "'></span>" ) );
-
-
+        $( "#"+name ).append( $( "<div class='col-md-4' id='left" + name + "'></span>" ) );
+		       
+	$( "#left"+name ).append( $( "<div class='assignresources'>Resources Assigned to This Project</div>" ) );
 	// Some how I have to get the teams from the game.assigments list....
 	for(var j = 0; j < game.assignments.length; j++) {
 	    var assignment = game.assignments[j];
@@ -1139,13 +1192,25 @@ function redraw(game) {
 	    }
 	}
 
-	$( "#left"+name ).append( $( "<h4 class='businessvaluepoints' id='vp" + name + "'>DEFEAT</h4>" ) );
-	$( "#vp"+name ).text("Business Value Point So Far: "+total_scores[i]);
 
 	// Now generate data for this project...
 	// Pass in the project title...
 	$( "#"+name ).append( $( "<div class='col-md-8' id='chart" + name + "'></div>" ) );
-	draw(game,data[i],"#chart" + name,project[1],project);
+			   draw(game,data[i],"#chart" + name,project[1],project);
+
+	$("#projectrows").append("<div class='row' id='" + name + "total'/>");
+	
+	$( "#projectrows" ).append( $( "<div id='eventbanner"+i+"'></div>" ) );
+	// now we want to find out which events apply to this project, and to make it fill in the event banner,
+	// so that the user can see all of the events...
+	var events = recentEventsForThisProject(game,project);
+	$( "#eventbanner"+i ).html(events);
+
+	
+			   
+	$( "#projectrows" ).append( $( "<p class='businessvaluepoints' id='vp" + name + "'>DEFEAT</p>" ) );
+        $( "#vp"+name ).text("Business Value Point So Far: "+total_scores[i]);
+        $("#projectrows").append("</div>");
     }
 
     $( "#projectrows" ).append( $( "<div class='row'><center><h3>Game History</h3></center></div"));
@@ -1154,7 +1219,6 @@ function redraw(game) {
 
    $( "#projectrows" ).append(history);
 
-    
     $("#score").text(""+summation(total_score(game)));
     $("#sprint").text(""+num_turns);    
     // What we really want to do here is to to move the team to a different project in the assignment based
@@ -1163,6 +1227,7 @@ function redraw(game) {
     $(".movedn").click(moveDown);
 
 }
+
 
 function getRidOfSpace() {
     $( "#eventreporting" ).empty();			   
