@@ -67,11 +67,58 @@ font-size: large;
 #gameovermessage {
 color: red;
 }
+#executeturnid {
+display: none;
+}
+#headerid {
+display: none;
+}
 
 </style>
   <body>
     <div class="container">
-      <div class="page-header">
+
+	<div class="row" id="messagebanner">
+<div class="col-md-12">
+<h1> Welcome to AgileSim.</h1>
+<br>
+</div>
+<div class="col-md-10">
+
+	    <p>
+	      Welcome, Agile Executive! This game is meant to help you think about Agile methodology. We assume that it is your job to manage 
+	      more than one software development team, and a number of experts. In this game, your resources are randomly decided at the start
+	      of the game, and the three projects in our portfolio that you have to work on are decided for you as well.
+	    </p>
+	    <p>
+	      However, you have the power to assign resources to projects.  Your resources are all either teams, or experts. Teams write software.
+	      Experts don't write software, but they can strongly effect a team or a project.
+	    </p>
+	    <p>
+	      Your goal is to provide as much Business Value as you can in six sprints. These are measured in Business Value Points.
+	      Each project may have one or more goal, which provides Business Value points.  To reach a goal, you have to write a certain
+	      amount of software, which is measured in Story Points.  Teams produce a random number of Story points each sprint, but some some
+	      teams tend to produce more or less than others.  A basic team produces either zero, ten, or twenty story points randomly.
+	      Some better teams get two such random story point events, but each event is still random.
+	    </p>
+
+	    <p>
+	      To do well in the game, you have to assign your teams and experts well to each project, possibly changing them each sprint.
+	      You will likely not get all of the possible goals of each project done in six sprints due to random events beyond your
+	      control, so choose which projects you assign resources to carefully. Your score is based solely on the Business Value Points
+	      that you provide, not completing all projects.
+	    </p>
+
+	    <p>
+	      In actuality, you can't move a team onto a project in a single two week sprint without a loss of efficiency. However, Agile
+	      methods are designed to minimize the cost of such resource allocation, and if we tried to make the game too realistic,
+	      it wouldn't be very fun.
+	    </p>
+	  </div>
+	</div>
+
+
+      <div id="headerid" class="page-header">
 	<h1><center>Sprint #: <span id="sprint"> -- </span>  Total Business Value Points: <span id="score"></span></center></h1>
       </div>
       <div class="row">
@@ -79,64 +126,33 @@ color: red;
 	  <button onclick="startNewGame()">Start New Game</button>
 	</div>
 	<div class="col-md-8">
-	  <button onclick="executeTurn()">Execute Turn</button>
+	  <button id="executeturnid" onclick="executeTurn()">Execute Turn</button>
+	</div>
 	</div>
 
-      <div class="row" id="messagebanner">
-<p>
-Welcome, Agile Executive! This game is meant to help you think about Agile methodology. We assume that it is your job to manage 
-more than one software development team, and a number of experts. In this game, your resources are randomly decided at the start
-of the game, and the three projects in our portfolio that you have to work on are decided for you as well.
-</p>
-<p>
-However, you have the power to assign resources to projects.  Your resources are all either teams, or experts. Teams write software.
-Experts don't write software, but they can strongly effect a team or a project.
-</p>
-<p>
-    Your goal is to provide as much Business Value as you can in six sprints. These are measured in Business Value Points.
-    Each project may have one or more goal, which provides Business Value points.  To reach a goal, you have to write a certain
-amount of software, which is measured in Story Points.  Teams produce a random number of Story points each sprint, but some some
-teams tend to produce more or less than others.  A basic team produces either zero, ten, or twenty story points randomly.
-    Some better teams get two such random story point events, but each event is still random.
-    </p>
-
-    <p>
-    To do well in the game, you have to assign your teams and experts well to each project, possibly changing them each sprint.
-    You will likely not get all of the possible goals of each project done in six sprints due to random events beyond your
-control, so choose which projects you assign resources to carefully. Your score is based solely on the Business Value Points
-that you provide, not completing all projects.
-    </p>
-
-    <p>
-    In actuality, you can't move a team onto a project in a single two week sprint without a loss of efficiency. However, Agile
-methods are designed to minimize the cost of such resource allocation, and if we tried to make the game too realistic,
-it wouldn't be very fun.
-    </p>
-      </div>
-
-      <div class="row" id="eventreporting">
-      </div>
+	<div class="row" id="eventreporting">
+	</div>
 
 	<div class="row" id="projectrows">
-      </div>
+	</div>
       </div>
 
     </div>
 
-<!-- jQuery (necessary for Bootstrap's JavaScript plugins) -->
-<script src="https://ajax.googleapis.com/ajax/libs/jquery/1.11.3/jquery.min.js"></script>
-<!-- Include all compiled plugins (below), or include individual files as needed -->
-<script src="js/bootstrap.min.js"></script>
+    <!-- jQuery (necessary for Bootstrap's JavaScript plugins) -->
+    <script src="https://ajax.googleapis.com/ajax/libs/jquery/1.11.3/jquery.min.js"></script>
+    <!-- Include all compiled plugins (below), or include individual files as needed -->
+    <script src="js/bootstrap.min.js"></script>
 
-<footer class="footer">
-  <p>
-    <div class="container well">
-      <p class="text-muted">This game is actively being developed in April, 2016. Send suggestions <a href="mailto:read.robert@gmail.com">read.robert@gmail.com</a>. It is meant to teach executives who run multiple projects the value and use of Agile methods.
-	<a href="https://github.com/PIFAH/agile-game-for-execs">View the Project on GitHub <small>PIFAH/agile-game-for-execs</small></a></p>
-    </div>
-</footer>
+    <footer class="footer">
+      <p>
+	<div class="container well">
+	  <p class="text-muted">This game is actively being developed in April, 2016. Send suggestions <a href="mailto:read.robert@gmail.com">read.robert@gmail.com</a>. It is meant to teach executives who run multiple projects the value and use of Agile methods.
+	    <a href="https://github.com/PIFAH/agile-game-for-execs">View the Project on GitHub <small>PIFAH/agile-game-for-execs</small></a></p>
+	</div>
+    </footer>
 
-</body>
+  </body>
 
     <script>
 
@@ -950,8 +966,10 @@ var game = null;
 // This is just a silly set of assignments to start with
 var assignment = [];
 
-// If the game already exists, this should really do a restart....
+// If the game already exists, this should really do a restart...
 function startNewGame() {
+    $("#executeturnid").show();
+    $("#headerid").show();
     init_data();
     getRidOfSpace();   
     game = start_game();
